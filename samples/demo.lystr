@@ -1,0 +1,55 @@
+# Demo Lyricstator Script - Advanced Features
+# Shows off complex timing and animations
+
+# Initialize
+timing(0);
+color(255, 255, 255, 255);
+position(640, 360);
+
+# Opening sequence
+display("Welcome to Lyricstator Demo", 2000);
+timing(2500);
+fade_out(500);
+
+timing(3500);
+color(100, 200, 255, 255);
+position(320, 200);
+display("Real-time", 1000);
+highlight("Real-time");
+
+timing(5000);
+position(320, 280);
+display("AI-powered", 1000);
+animate("glow", 500);
+
+timing(6500);
+position(320, 360);
+display("Karaoke System", 1500);
+fade_in(300);
+
+# Chorus section with multiple colors
+timing(8500);
+color(255, 100, 100, 255);  # Red
+position(200, 300);
+display("Sing", 500);
+
+timing(9000);
+color(100, 255, 100, 255);  # Green
+position(400, 300);
+display("Dance", 500);
+
+timing(9500);
+color(100, 100, 255, 255);  # Blue
+position(600, 300);
+display("Enjoy", 500);
+
+timing(10500);
+color(255, 255, 100, 255);  # Yellow
+position(400, 400);
+display("The future of karaoke is here!", 3000);
+animate("pulse", 2000);
+
+# Outro
+timing(14000);
+fade_out(1000);
+wait(1000);

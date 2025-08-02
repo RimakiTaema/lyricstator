@@ -73,4 +73,3 @@ file(COPY samples DESTINATION ${CMAKE_BINARY_DIR})
 # Install target
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 install(DIRECTORY assets DESTINATION share/lyricstator)
-install(DIRECTORY samples DESTINATION share/lyricstator)
