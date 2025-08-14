@@ -1,0 +1,27 @@
+{
+  "name": "neon",
+  "displayName": "Neon Nights",
+  "author": "Lyricstator Team",
+  "version": "1.0",
+  "description": "A vibrant neon theme perfect for nighttime karaoke sessions",
+  "colors": {
+    "background": [10, 10, 20, 255],
+    "text": [255, 255, 255, 255],
+    "accent": [255, 0, 255, 255],
+    "highlight": [0, 255, 255, 255],
+    "progress": [255, 255, 0, 255]
+  },
+  "fonts": {
+    "lyrics": "neon_lyrics.ttf",
+    "ui": "neon_ui.ttf",
+    "bold": "neon_bold.ttf",
+    "lyricsSize": 36,
+    "uiSize": 18,
+    "boldSize": 22
+  },
+  "images": {
+    "background": "neon_bg.png",
+    "noteIndicator": "neon_note.png",
+    "progressBar": "neon_progress.png"
+  }
+}

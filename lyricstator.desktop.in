@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Lyricstator
+Comment=AI-Powered Karaoke Application with Real-time Pitch Detection
+GenericName=Karaoke Application
+Exec=@CMAKE_INSTALL_PREFIX@/bin/lyricstator
+Icon=@CMAKE_INSTALL_PREFIX@/share/lyricstator/icons/lyricstator.png
+Terminal=false
+StartupNotify=true
+Categories=AudioVideo;Audio;Music;
+Keywords=karaoke;music;singing;lyrics;midi;audio;
+MimeType=audio/midi;audio/x-midi;application/x-lystr;
+StartupWMClass=Lyricstator

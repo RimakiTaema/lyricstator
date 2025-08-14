@@ -3,49 +3,49 @@
 ## Prerequisites
 
 ### Ubuntu/Debian
-```bash
+\`\`\`bash
 sudo apt update
 sudo apt install build-essential cmake libsdl2-dev libsdl2-mixer-dev libsdl2-ttf-dev
-```
+\`\`\`
 
 ### macOS (with Homebrew)
-```bash
+\`\`\`bash
 brew install cmake sdl2 sdl2_mixer sdl2_ttf
-```
+\`\`\`
 
 ### Windows (with vcpkg)
-```bash
+\`\`\`bash
 vcpkg install sdl2 sdl2-mixer sdl2-ttf
-```
+\`\`\`
 
 ## Building
 
 1. Clone the repository:
-```bash
+\`\`\`bash
 git clone <repository-url>
 cd lyricstator
-```
+\`\`\`
 
 2. Create build directory:
-```bash
+\`\`\`bash
 mkdir build && cd build
-```
+\`\`\`
 
 3. Configure with CMake:
-```bash
+\`\`\`bash
 cmake ..
-```
+\`\`\`
 
 4. Build:
-```bash
+\`\`\`bash
 make -j$(nproc)  # Linux/macOS
 # or
 cmake --build . --config Release  # Windows
-```
+\`\`\`
 
 ## Running
 
-```bash
+\`\`\`bash
 # Basic execution
 ./Lyricstator
 
@@ -54,7 +54,7 @@ cmake --build . --config Release  # Windows
 
 # With samples
 ./Lyricstator ../samples/sample_song.lystr
-```
+\`\`\`
 
 ## Troubleshooting
 
@@ -74,10 +74,10 @@ cmake --build . --config Release  # Windows
 ## Development
 
 ### Debug Build
-```bash
+\`\`\`bash
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j$(nproc)
-```
+\`\`\`
 
 ### Code Style
 - Use C++17 features
@@ -86,7 +86,7 @@ make -j$(nproc)
 - Update documentation for new features
 
 ### Testing
-```bash
+\`\`\`bash
 # Test with sample files
 ./Lyricstator ../samples/demo.lystr
 
@@ -95,4 +95,4 @@ make -j$(nproc)
 
 # Test AI detection (if audio device available)
 ./Lyricstator --test-ai
-```
+\`\`\`

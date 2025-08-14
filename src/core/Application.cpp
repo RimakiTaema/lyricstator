@@ -7,9 +7,11 @@
 #include "gui/Window.h"
 #include "gui/KaraokeDisplay.h"
 #include "gui/UserInterface.h"
+#include "gui/ResourcePackGUI.h"  // Added ResourcePackGUI include
 #include "sync/SynchronizationManager.h"
 #include "export/FormatExporter.h"
 #include "utils/ErrorHandler.h"
+#include "core/AssetManager.h"  // Added AssetManager include
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
@@ -50,6 +52,7 @@ bool Application::Initialize() {
     // Create subsystems
     try {
         errorHandler_ = std::make_unique<ErrorHandler>();
+        assetManager_ = std::make_unique<AssetManager>();  // Added AssetManager
         audioManager_ = std::make_unique<AudioManager>();
         midiParser_ = std::make_unique<MidiParser>();
         noteDetector_ = std::make_unique<NoteDetector>();
@@ -58,12 +61,18 @@ bool Application::Initialize() {
         window_ = std::make_unique<Window>();
         karaokeDisplay_ = std::make_unique<KaraokeDisplay>();
         userInterface_ = std::make_unique<UserInterface>();
+        resourcePackGUI_ = std::make_unique<ResourcePackGUI>();  // Added ResourcePackGUI
         syncManager_ = std::make_unique<SynchronizationManager>();
         formatExporter_ = std::make_unique<FormatExporter>();
         
         // Initialize subsystems
         if (!window_->Initialize(windowWidth_, windowHeight_, "Lyricstator")) {
             std::cerr << "Failed to initialize window" << std::endl;
+            return false;
+        }
+        
+        if (!assetManager_->Initialize()) {
+            std::cerr << "Failed to initialize asset manager" << std::endl;
             return false;
         }
         
@@ -79,6 +88,11 @@ bool Application::Initialize() {
         
         if (!userInterface_->Initialize(window_->GetRenderer())) {
             std::cerr << "Failed to initialize user interface" << std::endl;
+            return false;
+        }
+        
+        if (!resourcePackGUI_->Initialize(window_->GetRenderer(), assetManager_.get())) {
+            std::cerr << "Failed to initialize resource pack GUI" << std::endl;
             return false;
         }
         
@@ -146,6 +160,7 @@ void Application::Run() {
         window_->Clear();
         karaokeDisplay_->Render();
         userInterface_->Render();
+        resourcePackGUI_->Render();  // Added ResourcePackGUI render
         window_->Present();
         
         // Limit frame rate to 60 FPS
@@ -167,6 +182,7 @@ void Application::Shutdown() {
     // Shutdown subsystems in reverse order
     formatExporter_.reset();
     syncManager_.reset();
+    resourcePackGUI_.reset();  // Added ResourcePackGUI shutdown
     userInterface_.reset();
     karaokeDisplay_.reset();
     window_.reset();
@@ -175,6 +191,7 @@ void Application::Shutdown() {
     noteDetector_.reset();
     midiParser_.reset();
     audioManager_.reset();
+    assetManager_.reset();  // Added AssetManager shutdown
     errorHandler_.reset();
     
     // Shutdown SDL
@@ -205,6 +222,9 @@ void Application::HandleSDLEvents() {
                     case SDLK_ESCAPE:
                         Stop();
                         break;
+                    case SDLK_x:  // Added X key to toggle ResourcePackGUI
+                        resourcePackGUI_->Toggle();
+                        break;
                     case SDLK_q:
                         if (event.key.keysym.mod & KMOD_CTRL) {
                             running_ = false;
@@ -232,8 +252,12 @@ void Application::HandleSDLEvents() {
                 break;
         }
         
-        // Pass events to UI
-        userInterface_->HandleEvent(event);
+        if (resourcePackGUI_->IsVisible()) {
+            resourcePackGUI_->HandleEvent(event);
+        } else {
+            // Pass events to UI only if ResourcePackGUI is not handling them
+            userInterface_->HandleEvent(event);
+        }
     }
 }
 
@@ -262,6 +286,7 @@ void Application::UpdateSystems(float deltaTime) {
     // Update displays
     karaokeDisplay_->Update(deltaTime);
     userInterface_->Update(deltaTime);
+    resourcePackGUI_->Update(deltaTime);  // Added ResourcePackGUI update
 }
 
 float Application::GetDeltaTime() {

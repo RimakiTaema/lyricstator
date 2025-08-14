@@ -18,9 +18,11 @@ class LystrInterpreter;
 class Window;
 class KaraokeDisplay;
 class UserInterface;
+class ResourcePackGUI;  // Added ResourcePackGUI forward declaration
 class SynchronizationManager;
 class FormatExporter;
 class ErrorHandler;
+class AssetManager;  // Added AssetManager forward declaration
 
 class Application {
 public:
@@ -62,6 +64,7 @@ public:
     
 private:
     // Core subsystems
+    std::unique_ptr<AssetManager> assetManager_;  // Added AssetManager
     std::unique_ptr<AudioManager> audioManager_;
     std::unique_ptr<MidiParser> midiParser_;
     std::unique_ptr<NoteDetector> noteDetector_;
@@ -70,6 +73,7 @@ private:
     std::unique_ptr<Window> window_;
     std::unique_ptr<KaraokeDisplay> karaokeDisplay_;
     std::unique_ptr<UserInterface> userInterface_;
+    std::unique_ptr<ResourcePackGUI> resourcePackGUI_;  // Added ResourcePackGUI
     std::unique_ptr<SynchronizationManager> syncManager_;
     std::unique_ptr<FormatExporter> formatExporter_;
     std::unique_ptr<ErrorHandler> errorHandler_;

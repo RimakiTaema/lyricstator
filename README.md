@@ -1,362 +1,180 @@
-# Lyricstator v1.0.0
+# 🎤 Lyricstator - Advanced Karaoke System
 
-**Karaoke and Lyric Visualization System**
+**Lyricstator** is a sophisticated karaoke and lyric visualization application featuring AI-powered pitch detection, real-time audio synchronization, and beautiful visual effects.
 
-Lyricstator is a complete karaoke and lyric visualization system built in C++ using SDL2. It provides real-time audio/MIDI playback, AI-powered note detection, custom lyric scripting, and beautiful karaoke visualizations.
-
-## Features
+## ✨ Features
 
 ### 🎵 Audio & MIDI Support
-- **Multi-format Audio**: Load and play WAV, MP3, and OGG audio files
-- **MIDI Integration**: Parse MIDI files (.mid) with tempo maps, note events, and lyric meta events
-- **Real-time Playback**: Synchronized audio and MIDI playback with precise timing control
+- **Multi-format audio**: WAV, MP3, OGG support
+- **MIDI integration**: Full MIDI file parsing and playback
+- **Real-time synchronization**: Perfect timing between audio, MIDI, and lyrics
 
-### 🤖 AI Note Detection
-- **Pitch Detection**: Multiple algorithms (YIN, Autocorrelation, FFT) for voice pitch analysis
-- **Voice Activity Detection**: Intelligent detection of singing vs. silence
-- **Calibration System**: Train the AI on user's voice for improved accuracy
-- **Real-time Processing**: Live pitch feedback during karaoke sessions
+### 🤖 AI-Powered Features
+- **Pitch detection**: Real-time voice analysis and scoring
+- **Note recognition**: Advanced algorithms for musical note detection
+- **Performance feedback**: Visual indicators for singing accuracy
 
-### 📝 Lyric Scripting (.lystr)
-- **Custom Language**: Powerful scripting language for timed lyrics and animations
-- **Rich Commands**: Display text, animations, colors, positioning, and effects
-- **Conditional Logic**: Support for if/else statements and loops
-- **Timeline Control**: Precise timing control with millisecond accuracy
+### 🎨 Beautiful Visuals
+- **Animated backgrounds**: Smooth gradient animations
+- **Enhanced typography**: Professional text rendering with SDL_ttf
+- **Real-time effects**: Glow effects, highlight animations, and visual feedback
+- **Customizable themes**: Configurable color schemes and visual styles
 
-### 🎨 Visual Interface
-- **SDL2 Graphics**: Hardware-accelerated rendering with smooth animations
-- **Karaoke Display**: Real-time lyric highlighting and pitch visualization
-- **User Controls**: Intuitive interface for playback control and file loading
-- **Drag & Drop**: Easy file loading by dragging files onto the window
+### 📝 Advanced Scripting
+- **Custom .lystr format**: Powerful scripting language for lyrics
+- **Timing control**: Precise control over lyric display timing
+- **Animation commands**: Text effects, fades, highlights, and positioning
+- **Export capabilities**: Multiple format support (XMK, EXMK, LYSTEMK)
 
-### 🔄 Synchronization
-- **Multi-source Sync**: Coordinate audio, MIDI, and lyrics in perfect timing
-- **Seek Support**: Jump to any position while maintaining synchronization
-- **Tempo Control**: Adjust playback speed without losing sync
-
-### 📤 Export System
-- **Multiple Formats**: Export to XMK, EXMK, LYSTEMK, and MIDI with lyrics
-- **Project Packaging**: Combine audio, MIDI, and lyric files into karaoke packages
-- **Format Conversion**: Convert between different karaoke file formats
-
-## Installation
+## 🚀 Quick Start
 
 ### Prerequisites
-- C++17 compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
-- CMake 3.16 or higher
-- SDL2 development libraries
-- SDL2_mixer for audio support
-- SDL2_ttf for text rendering
 
-### Ubuntu/Debian
-```bash
+**Ubuntu/Debian:**
+\`\`\`bash
 sudo apt update
 sudo apt install build-essential cmake libsdl2-dev libsdl2-mixer-dev libsdl2-ttf-dev
-```
+\`\`\`
 
-### macOS (with Homebrew)
-```bash
+**macOS (Homebrew):**
+\`\`\`bash
 brew install cmake sdl2 sdl2_mixer sdl2_ttf
-```
+\`\`\`
 
-### Windows (with vcpkg)
-```bash
+**Windows (vcpkg):**
+\`\`\`bash
 vcpkg install sdl2 sdl2-mixer sdl2-ttf
-```
+\`\`\`
 
 ### Building
-```bash
+
+\`\`\`bash
+# Clone and enter directory
 git clone <repository-url>
 cd lyricstator
+
+# Create build directory
 mkdir build && cd build
+
+# Configure and build
 cmake ..
-make -j$(nproc)
-```
+make -j$(nproc)  # Linux/macOS
+# or: cmake --build . --config Release  # Windows
+\`\`\`
 
-## Usage
+### Running
 
-### Basic Usage
-```bash
-# Run the application
+\`\`\`bash
+# Basic execution
 ./Lyricstator
 
-# Load files via command line
+# Load files directly
 ./Lyricstator song.mp3 song.mid lyrics.lystr
 
-# The application will open with a GUI window
-```
+# Try samples
+./Lyricstator ../samples/demo.lystr
+\`\`\`
 
-### Controls
-- **Space**: Play/Pause
-- **Escape**: Stop playback
-- **Ctrl+Q**: Quit application
-- **Mouse**: Click UI elements for control
-- **Drag & Drop**: Drop audio/MIDI/lyric files onto the window
+## 🎮 Controls
 
-### Supported File Formats
+| Key | Action |
+|-----|--------|
+| `Space` | Play/Pause |
+| `Escape` | Stop |
+| `Ctrl+Q` | Quit |
+| **Drag & Drop** | Load files |
 
-#### Audio Files
-- `.wav` - Uncompressed audio
-- `.mp3` - MPEG audio (requires SDL2_mixer with MP3 support)
-- `.ogg` - Ogg Vorbis audio
+## 📁 Supported Formats
 
-#### MIDI Files
-- `.mid`, `.midi` - Standard MIDI files (format 0, 1, 2)
-- Supports tempo changes, time signatures, and lyric events
+- **Audio**: `.wav`, `.mp3`, `.ogg`
+- **MIDI**: `.mid`, `.midi`
+- **Lyrics**: `.lystr` (custom format)
 
-#### Lyric Scripts
-- `.lystr` - Lyricstator script files (custom format)
-- `.txt` - Plain text files (basic support)
+## 🎨 Visual Features
 
-## Lyric Scripting Language (.lystr)
+### Enhanced Graphics
+- **Animated gradient backgrounds** with smooth transitions
+- **Professional text rendering** using SDL_ttf
+- **Real-time pitch visualization** with smooth animations
+- **Glow effects and highlights** for active lyrics
+- **Musical note decorations** floating across the screen
 
-The `.lystr` format is a powerful scripting language for creating timed karaoke experiences.
+### Color Schemes
+- **Deep space theme**: Dark blues with gold highlights
+- **Customizable colors**: Easy theme modification
+- **High contrast**: Optimized for readability
 
-### Basic Commands
+## 🔧 Development
 
-```lystr
-# Set timing (in milliseconds)
-timing(1000);
-
-# Display text with duration
-display("Hello World", 2000);
-
-# Set text color (R, G, B, A)
-color(255, 255, 255, 255);
-
-# Set text position (X, Y)
-position(400, 300);
-
-# Highlight specific text
-highlight("Hello");
-
-# Animation effects
-fade_in(500);
-fade_out(500);
-animate("slide_left", 1000);
-
-# Wait for specified time
-wait(1000);
-```
-
-### Advanced Features
-
-```lystr
-# Conditional display based on pitch detection
-if (pitch > 440) {
-    display("High note!", 1000);
-    color(255, 100, 100, 255);
-}
-
-# Loop animations
-repeat(3) {
-    animate("pulse", 500);
-    wait(500);
-}
-```
-
-### Sample Script
-See `samples/sample_song.lystr` for a complete example.
-
-## AI Note Detection
-
-### Algorithms
-Lyricstator supports multiple pitch detection algorithms:
-
-1. **YIN Algorithm**: High accuracy, good for monophonic vocals
-2. **Autocorrelation**: Fast processing, suitable for real-time use
-3. **FFT-based**: Frequency domain analysis, good for harmonic content
-4. **Hybrid**: Combines multiple algorithms for best results
-
-### Configuration
-```cpp
-// Set detection algorithm
-noteDetector.SetAlgorithm(NoteDetector::Algorithm::YIN);
-
-// Adjust sensitivity (0.0 - 1.0)
-noteDetector.SetSensitivity(0.7f);
-
-// Set frequency range for vocal detection
-noteDetector.SetFrequencyRange(80.0f, 800.0f);
-
-// Set confidence threshold
-noteDetector.SetConfidenceThreshold(0.5f);
-```
-
-### Calibration
-The AI can be calibrated to individual voices:
-
-1. Start calibration mode
-2. Sing along with a reference track
-3. Save calibration data for future use
-4. Load calibration data for improved accuracy
-
-## Export Formats
-
-### XMK (eXtended Music Karaoke)
-Standard karaoke format with embedded audio and lyrics.
-
-### EXMK (Extended XMK)
-Enhanced XMK format with additional metadata and effects.
-
-### LYSTEMK (Lyricstator Extended Music Karaoke)
-Native Lyricstator format supporting all features including AI detection data.
-
-### MIDI with Lyrics
-Standard MIDI file with embedded lyric events.
-
-## Architecture
-
-### Core Components
-- **Application**: Main application controller and event system
-- **AudioManager**: SDL2-based audio playback and analysis
-- **MidiParser**: Complete MIDI file parser with tempo and lyric support
-- **NoteDetector**: Multi-algorithm AI pitch detection system
-- **LystrParser/Interpreter**: Custom scripting language implementation
-- **Window/GUI**: SDL2 graphics and user interface
-- **SynchronizationManager**: Timing coordination between all systems
-- **FormatExporter**: Multi-format export system
-
-### Plugin Architecture
-The note detection system is designed to be extensible:
-
-```cpp
-class CustomPitchAlgorithm : public PitchDetectionAlgorithm {
-public:
-    PitchDetectionResult DetectPitch(const std::vector<float>& audioSamples, int sampleRate) override {
-        // Implement custom algorithm
-        return result;
-    }
-};
-```
-
-## Development
-
-### Project Structure
-```
-lyricstator/
-├── src/
-│   ├── core/           # Application core and main loop
-│   ├── audio/          # Audio playback and MIDI parsing
-│   ├── ai/             # AI note detection algorithms
-│   ├── scripting/      # .lystr language parser/interpreter
-│   ├── gui/            # SDL2 graphics and UI
-│   ├── sync/           # Synchronization management
-│   ├── export/         # Format export system
-│   ├── utils/          # Utility functions and helpers
-│   └── common/         # Shared types and definitions
-├── samples/            # Sample files and test data
-├── assets/             # Graphics, fonts, and resources
-├── CMakeLists.txt      # Build configuration
-└── README.md           # This file
-```
-
-### Building with Debug Support
-```bash
+### Debug Build
+\`\`\`bash
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j$(nproc)
-```
+\`\`\`
 
-### Running Tests
-```bash
-# Run with sample files
-./Lyricstator ../samples/sample_song.lystr
+### Code Style
+- **Modern C++17** features throughout
+- **Modular architecture** with clear separation of concerns
+- **Comprehensive error handling** with logging
+- **Cross-platform compatibility**
 
-# Enable verbose logging
-./Lyricstator --verbose
+### Testing
+\`\`\`bash
+# Test with samples
+./Lyricstator ../samples/demo.lystr
 
-# Test AI detection
+# Test AI features (requires audio device)
 ./Lyricstator --test-ai
-```
+\`\`\`
 
-## Contributing
+## 📊 Architecture
 
-We welcome contributions! Please see CONTRIBUTING.md for guidelines.
+\`\`\`
+Lyricstator/
+├── src/
+│   ├── core/           # Application core and lifecycle
+│   ├── audio/          # Audio management and MIDI parsing
+│   ├── ai/             # AI-powered note detection
+│   ├── gui/            # Enhanced visual interface
+│   ├── scripting/      # .lystr format parsing and interpretation
+│   ├── sync/           # Synchronization management
+│   ├── export/         # Format export capabilities
+│   ├── utils/          # Utilities and error handling
+│   └── common/         # Shared types and definitions
+├── assets/             # Fonts, themes, and resources
+├── samples/            # Example .lystr files
+└── build/              # Build output directory
+\`\`\`
 
-### Areas for Improvement
-1. **Advanced AI Models**: Integrate deep learning models for pitch detection
-2. **More Export Formats**: Support for additional karaoke formats
-3. **Real-time Effects**: Advanced audio processing and effects
-4. **Web Interface**: Browser-based control interface
-5. **Mobile Support**: Android/iOS companion apps
-6. **Cloud Integration**: Online lyric and song databases
+## 🎯 Recent Enhancements
 
-## Error Handling
+- ✅ **Enhanced visual rendering** with SDL_ttf integration
+- ✅ **Animated backgrounds** and smooth transitions
+- ✅ **Improved pitch visualization** with real-time feedback
+- ✅ **Professional error handling** with comprehensive logging
+- ✅ **Modern CMake configuration** with better organization
+- ✅ **Cross-platform font loading** with fallback support
 
-### Common Issues
+## 🤝 Contributing
 
-#### "Failed to initialize SDL"
-- Ensure SDL2 development libraries are installed
-- Check that your system supports hardware acceleration
+We welcome contributions! Please see our contributing guidelines for:
+- Code style requirements
+- Testing procedures
+- Documentation standards
+- Feature request process
 
-#### "Failed to load audio file"
-- Verify the audio file format is supported
-- Check file permissions and path
+## 📄 License
 
-#### "MIDI parsing failed"
-- Ensure the MIDI file is not corrupted
-- Check for unsupported MIDI features (SMPTE timing)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-#### "No voice detected"
-- Adjust microphone levels
-- Lower the sensitivity threshold
-- Check audio input device selection
+## 🎵 Get Started Today!
 
-### DAW Export Tips
-
-For best results when exporting from Digital Audio Workstations:
-
-#### Ableton Live
-1. Export audio as WAV/AIFF
-2. Export MIDI with lyrics as separate track
-3. Use "Export MIDI Track" option
-
-#### FL Studio
-1. Export as WAV (recommended) or MP3
-2. Use "Export MIDI" from the File menu
-3. Include lyric events in MIDI export
-
-#### Logic Pro
-1. Export audio as WAV or AIFF
-2. Use "Export as MIDI File" with lyrics
-3. Enable "Include Tempo Information"
-
-#### Pro Tools
-1. Export audio as WAV
-2. Use "Export MIDI" for timing data
-3. Manually create .lystr files for advanced features
-
-## Performance
-
-### System Requirements
-- **Minimum**: 2GB RAM, dual-core CPU, integrated graphics
-- **Recommended**: 4GB RAM, quad-core CPU, dedicated graphics
-- **Audio Latency**: < 50ms for real-time pitch detection
-- **Video**: 60 FPS rendering with hardware acceleration
-
-### Optimization Tips
-1. Use WAV files for best audio performance
-2. Enable hardware-accelerated rendering
-3. Adjust buffer sizes for your system
-4. Use appropriate pitch detection algorithms for your needs
-
-## License
-
-Lyricstator is released under the MIT License. See LICENSE file for details.
-
-## Acknowledgments
-
-- SDL2 team for the excellent multimedia library
-- YIN algorithm researchers for pitch detection
-- The open source community for inspiration and support
-
-## Support
-
-For support, bug reports, or feature requests:
-- GitHub Issues: [Project Issues Page]
-- Email: support@lyricstator.dev
-- Discord: [Community Server]
+Transform your karaoke experience with Lyricstator's advanced features and beautiful visuals. Perfect for:
+- **Home karaoke systems**
+- **Professional venues**
+- **Music education**
+- **Performance analysis**
 
 ---
 
-**Lyricstator** - Making karaoke more intelligent, one note at a time! 🎤🎵
+*Made with ❤️ for music lovers everywhere*
