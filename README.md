@@ -31,24 +31,23 @@
 ### Prerequisites
 
 **Ubuntu/Debian:**
-\`\`\`bash
+```bash
 sudo apt update
 sudo apt install build-essential cmake libsdl2-dev libsdl2-mixer-dev libsdl2-ttf-dev
-\`\`\`
+```
 
 **macOS (Homebrew):**
-\`\`\`bash
+```bash
 brew install cmake sdl2 sdl2_mixer sdl2_ttf
-\`\`\`
+```
 
 **Windows (vcpkg):**
-\`\`\`bash
+```bash
 vcpkg install sdl2 sdl2-mixer sdl2-ttf
-\`\`\`
+```
 
 ### Building
-
-\`\`\`bash
+```bash
 # Clone and enter directory
 git clone <repository-url>
 cd lyricstator
@@ -60,11 +59,10 @@ mkdir build && cd build
 cmake ..
 make -j$(nproc)  # Linux/macOS
 # or: cmake --build . --config Release  # Windows
-\`\`\`
+```
 
 ### Running
-
-\`\`\`bash
+```bash
 # Basic execution
 ./Lyricstator
 
@@ -73,19 +71,18 @@ make -j$(nproc)  # Linux/macOS
 
 # Try samples
 ./Lyricstator ../samples/demo.lystr
-\`\`\`
+```
 
 ## 🎮 Controls
 
-| Key | Action |
-|-----|--------|
-| `Space` | Play/Pause |
-| `Escape` | Stop |
-| `Ctrl+Q` | Quit |
-| **Drag & Drop** | Load files |
+| Key            | Action     |
+|----------------|------------|
+| `Space`        | Play/Pause |
+| `Escape`       | Stop       |
+| `Ctrl+Q`       | Quit       |
+| **Drag & Drop**| Load files |
 
 ## 📁 Supported Formats
-
 - **Audio**: `.wav`, `.mp3`, `.ogg`
 - **MIDI**: `.mid`, `.midi`
 - **Lyrics**: `.lystr` (custom format)
@@ -107,10 +104,10 @@ make -j$(nproc)  # Linux/macOS
 ## 🔧 Development
 
 ### Debug Build
-\`\`\`bash
+```bash
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j$(nproc)
-\`\`\`
+```
 
 ### Code Style
 - **Modern C++17** features throughout
@@ -119,17 +116,16 @@ make -j$(nproc)
 - **Cross-platform compatibility**
 
 ### Testing
-\`\`\`bash
+```bash
 # Test with samples
 ./Lyricstator ../samples/demo.lystr
 
 # Test AI features (requires audio device)
 ./Lyricstator --test-ai
-\`\`\`
+```
 
 ## 📊 Architecture
-
-\`\`\`
+```
 Lyricstator/
 ├── src/
 │   ├── core/           # Application core and lifecycle
@@ -144,10 +140,9 @@ Lyricstator/
 ├── assets/             # Fonts, themes, and resources
 ├── samples/            # Example .lystr files
 └── build/              # Build output directory
-\`\`\`
+```
 
 ## 🎯 Recent Enhancements
-
 - ✅ **Enhanced visual rendering** with SDL_ttf integration
 - ✅ **Animated backgrounds** and smooth transitions
 - ✅ **Improved pitch visualization** with real-time feedback
@@ -156,7 +151,6 @@ Lyricstator/
 - ✅ **Cross-platform font loading** with fallback support
 
 ## 🤝 Contributing
-
 We welcome contributions! Please see our contributing guidelines for:
 - Code style requirements
 - Testing procedures
@@ -164,11 +158,9 @@ We welcome contributions! Please see our contributing guidelines for:
 - Feature request process
 
 ## 📄 License
-
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🎵 Get Started Today!
-
 Transform your karaoke experience with Lyricstator's advanced features and beautiful visuals. Perfect for:
 - **Home karaoke systems**
 - **Professional venues**
