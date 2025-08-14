@@ -67,7 +67,7 @@ target_link_libraries(${PROJECT_NAME}
 target_compile_options(${PROJECT_NAME} PRIVATE ${SDL2_CFLAGS_OTHER})
 
 # Copy assets to build directory
-file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})
+# file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY samples DESTINATION ${CMAKE_BINARY_DIR})
 
 # Install target
