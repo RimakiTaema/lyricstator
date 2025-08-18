@@ -46,17 +46,35 @@ jobs:
       - name: Setup Linux ARM64 cross-compilation
         if: runner.os == 'Linux' && matrix.arch == 'arm64'
         run: |
-          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            libc6-dev-arm64-cross
-          # Install ARM64 development libraries
-          sudo apt install -y libasound2-dev:arm64 libjack-jackd2-dev:arm64 \
-            libsndfile1-dev:arm64 libvorbis-dev:arm64 libogg-dev:arm64 \
-            libopus-dev:arm64 libflac-dev:arm64 libmpg123-dev:arm64 \
-            libpulse-dev:arm64 libfreetype6-dev:arm64 libglib2.0-dev:arm64 \
-            libx11-dev:arm64
-          # Add ARM64 architecture
+          # Add ARM64 architecture first
           sudo dpkg --add-architecture arm64
           sudo apt update
+          # Install cross-compilation tools
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+            libc6-dev-arm64-cross
+          # Install ARM64 development libraries with retry on failure
+          sudo apt install -y --fix-missing \
+            libasound2-dev:arm64 \
+            libjack-jackd2-dev:arm64 \
+            libsndfile1-dev:arm64 \
+            libvorbis-dev:arm64 \
+            libogg-dev:arm64 \
+            libopus-dev:arm64 \
+            libflac-dev:arm64 \
+            libmpg123-dev:arm64 \
+            libpulse-dev:arm64 \
+            libfreetype6-dev:arm64 \
+            libglib2.0-dev:arm64 \
+            libx11-dev:arm64 || {
+              echo "Some packages failed to install, trying individual installation..."
+              for pkg in libasound2-dev:arm64 libjack-jackd2-dev:arm64 libsndfile1-dev:arm64 \
+                        libvorbis-dev:arm64 libogg-dev:arm64 libopus-dev:arm64 libflac-dev:arm64 \
+                        libmpg123-dev:arm64 libpulse-dev:arm64 libfreetype6-dev:arm64 \
+                        libglib2.0-dev:arm64 libx11-dev:arm64; do
+                echo "Installing $pkg..."
+                sudo apt install -y "$pkg" || echo "Warning: Failed to install $pkg"
+              done
+            }
 
       - name: Build OpusFile (Linux)
         if: runner.os == 'Linux'
