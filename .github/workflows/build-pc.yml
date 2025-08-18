@@ -1,0 +1,44 @@
+name: Build Lyricstator (PC - Linux & Windows)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        arch: [x86_64, arm64]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake git g++ pkg-config mingw-w64
+
+      - name: Setup dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --yes
+          choco install git --yes
+          choco install mingw --yes
+
+      - name: Configure & build
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
+          cmake --build . --config Release -- -j$(nproc)
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v3
+        with:
+          name: Lyricstator-${{ matrix.os }}-${{ matrix.arch }}
+          path: build/Lyricstator
