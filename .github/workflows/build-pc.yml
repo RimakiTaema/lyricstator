@@ -80,8 +80,8 @@ jobs:
       # -------------------------------
       - name: Build Lyricstator
         run: |
-          mkdir -p build && cd build
           if [[ "${{ runner.os }}" == "Linux" ]]; then
+            mkdir -p build && cd build \
             cmake .. \
               -DBUILD_SHARED_LIBS=OFF \
               -DSDL_SHARED=OFF \
@@ -90,6 +90,7 @@ jobs:
             cmake --build . -- -j$(nproc)
           fi
           if [[ "${{ runner.os }}" == "Windows" && "${{ matrix.arch }}" != 'arm64' ]]; then
+            mkdir -p build && cd build \
             cmake .. \
               -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
               -DBUILD_SHARED_LIBS=OFF \
