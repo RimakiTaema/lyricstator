@@ -26,9 +26,11 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y build-essential cmake git g++ pkg-config \
-            libogg-dev libvorbis-dev libflac-dev libopusfile-dev libwavpack-dev \
-            libfreetype6-dev libjpeg-dev libpng-dev libtiff-dev libwebp-dev zlib1g-dev \
-            mingw-w64
+            libsdl2-dev libvorbis-dev libogg-dev libflac-dev libmpg123-dev \
+            libopus-dev libopusfile-dev libxmp-dev libmodplug-dev \
+            libfluidsynth-dev libmad0-dev libmikmod-dev libwavpack-dev \
+            libsndfile1-dev libfreetype-dev libjpeg-dev libpng-dev libtiff-dev \
+            libwebp-dev zlib1g-dev mingw-w64
 
       # -------------------------------
       # Windows dependencies
@@ -52,8 +54,3 @@ jobs:
       # -------------------------------
       # Upload artifacts
       # -------------------------------
-      - name: Upload executable
-        uses: actions/upload-artifact@v4
-        with:
-          name: Lyricstator-${{ matrix.os }}-${{ matrix.arch }}
-          path: build/Lyricstator
