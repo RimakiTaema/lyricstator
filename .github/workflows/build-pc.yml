@@ -29,6 +29,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Add caching for apt packages
+      - name: Cache apt packages
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ matrix.arch }}-${{ hashFiles('**/workflows/build-pc.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-${{ matrix.arch }}-
+            ${{ runner.os }}-apt-
+
       # -------------------------------
       # Linux dependencies & build
       # -------------------------------
@@ -46,41 +57,76 @@ jobs:
       - name: Setup Linux ARM64 cross-compilation
         if: runner.os == 'Linux' && matrix.arch == 'arm64'
         run: |
-          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            libc6-dev-arm64-cross
-          # Install ARM64 development libraries
-          sudo apt install -y libasound2-dev:arm64 libjack-jackd2-dev:arm64 \
-            libsndfile1-dev:arm64 libvorbis-dev:arm64 libogg-dev:arm64 \
-            libopus-dev:arm64 libflac-dev:arm64 libmpg123-dev:arm64 \
-            libpulse-dev:arm64 libfreetype6-dev:arm64 libglib2.0-dev:arm64 \
-            libx11-dev:arm64
-          # Add ARM64 architecture
+          # Add ARM64 architecture first
           sudo dpkg --add-architecture arm64
           sudo apt update
+          # Install cross-compilation tools
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+            libc6-dev-arm64-cross
+          # Install ARM64 development libraries with retry on failure
+          sudo apt install -y --fix-missing \
+            libasound2-dev:arm64 \
+            libjack-jackd2-dev:arm64 \
+            libsndfile1-dev:arm64 \
+            libvorbis-dev:arm64 \
+            libogg-dev:arm64 \
+            libopus-dev:arm64 \
+            libflac-dev:arm64 \
+            libmpg123-dev:arm64 \
+            libpulse-dev:arm64 \
+            libfreetype6-dev:arm64 \
+            libglib2.0-dev:arm64 \
+            libx11-dev:arm64 || {
+              echo "Some packages failed to install, trying individual installation..."
+              for pkg in libasound2-dev:arm64 libjack-jackd2-dev:arm64 libsndfile1-dev:arm64 \
+                        libvorbis-dev:arm64 libogg-dev:arm64 libopus-dev:arm64 libflac-dev:arm64 \
+                        libmpg123-dev:arm64 libpulse-dev:arm64 libfreetype6-dev:arm64 \
+                        libglib2.0-dev:arm64 libx11-dev:arm64; do
+                echo "Installing $pkg..."
+                sudo apt install -y "$pkg" || echo "Warning: Failed to install $pkg"
+              done
+            }
+
+      # Cache OpusFile build
+      - name: Cache OpusFile
+        if: runner.os == 'Linux'
+        id: cache-opusfile
+        uses: actions/cache@v4
+        with:
+          path: ~/opusfile
+          key: opusfile-${{ runner.os }}-${{ matrix.arch }}-v1
 
       - name: Build OpusFile (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && steps.cache-opusfile.outputs.cache-hit != 'true'
         run: |
-          git clone https://github.com/xiph/opusfile.git
+          git clone --depth 1 https://github.com/xiph/opusfile.git
           cd opusfile
           ./autogen.sh
           if [[ "${{ matrix.arch }}" == "arm64" ]]; then
             ./configure --prefix=$HOME/opusfile --host=aarch64-linux-gnu \
-              CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++
+              CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
+              PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
           else
             ./configure --prefix=$HOME/opusfile
           fi
           make -j$(nproc)
           make install
-          export PKG_CONFIG_PATH=$HOME/opusfile/lib/pkgconfig:$PKG_CONFIG_PATH
           cd ..
 
-      - name: Build FluidSynth v4 (Linux)
+      # Cache FluidSynth build
+      - name: Cache FluidSynth
         if: runner.os == 'Linux'
+        id: cache-fluidsynth
+        uses: actions/cache@v4
+        with:
+          path: ~/fluidsynth
+          key: fluidsynth-${{ runner.os }}-${{ matrix.arch }}-v4.2.2
+
+      - name: Build FluidSynth v4 (Linux)
+        if: runner.os == 'Linux' && steps.cache-fluidsynth.outputs.cache-hit != 'true'
         run: |
-          git clone https://github.com/FluidSynth/fluidsynth.git
+          git clone --depth 1 --branch v4.2.2 https://github.com/FluidSynth/fluidsynth.git
           cd fluidsynth
-          git checkout v4.2.2
           mkdir build && cd build
           if [[ "${{ matrix.arch }}" == "arm64" ]]; then
             cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth \
@@ -90,13 +136,14 @@ jobs:
               -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
               -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
               -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-              -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
+              -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+              -DCMAKE_BUILD_TYPE=Release
           else
-            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth
+            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth \
+              -DCMAKE_BUILD_TYPE=Release
           fi
           make -j$(nproc)
           make install
-          export PKG_CONFIG_PATH=$HOME/fluidsynth/lib/pkgconfig:$PKG_CONFIG_PATH
           cd ../..
 
       # -------------------------------
@@ -112,43 +159,82 @@ jobs:
       # -------------------------------
       # Build Lyricstator
       # -------------------------------
-      - name: Build Lyricstator
+      - name: Setup environment variables
         run: |
           if [[ "${{ runner.os }}" == "Linux" ]]; then
-            mkdir -p build && cd build
-            if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-              # Cross-compile for ARM64
-              cmake .. \
-                -DBUILD_SHARED_LIBS=OFF \
-                -DSDL_SHARED=OFF \
-                -DSDL_STATIC=ON \
-                -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth" \
-                -DCMAKE_SYSTEM_NAME=Linux \
-                -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-                -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-                -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-                -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
-                -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-                -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-                -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
-            else
-              # Native x86_64 build
-              cmake .. \
-                -DBUILD_SHARED_LIBS=OFF \
-                -DSDL_SHARED=OFF \
-                -DSDL_STATIC=ON \
-                -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
-            fi
-            cmake --build . -- -j$(nproc)
+            echo "PKG_CONFIG_PATH=$HOME/opusfile/lib/pkgconfig:$HOME/fluidsynth/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
           fi
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            mkdir -p build && cd build
+
+      - name: Build Lyricstator (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p build && cd build
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            # Cross-compile for ARM64
             cmake .. \
-              -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
+              -DCMAKE_BUILD_TYPE=Release \
               -DBUILD_SHARED_LIBS=OFF \
               -DSDL_SHARED=OFF \
-              -DSDL_STATIC=ON
-            cmake --build . --config Release -- /m
+              -DSDL_STATIC=ON \
+              -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth" \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+              -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
+              -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+              -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+              -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+              -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
+          else
+            # Native x86_64 build
+            cmake .. \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_SHARED_LIBS=OFF \
+              -DSDL_SHARED=OFF \
+              -DSDL_STATIC=ON \
+              -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
+          fi
+          cmake --build . --parallel $(nproc)
+
+      - name: Build Lyricstator (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DSDL_SHARED=OFF `
+            -DSDL_STATIC=ON
+          cmake --build . --config Release --parallel
+
+      # -------------------------------
+      # Validate build
+      # -------------------------------
+      - name: Validate build output
+        run: |
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            if [[ -f "build/lyricstator" ]]; then
+              echo "✅ Build successful: lyricstator binary found"
+              file build/lyricstator
+              ls -la build/lyricstator
+            else
+              echo "❌ Build failed: lyricstator binary not found"
+              ls -la build/
+              exit 1
+            fi
+          elif [[ "${{ runner.os }}" == "Windows" ]]; then
+            if [[ -f "build/Release/lyricstator.exe" ]] || [[ -f "build/lyricstator.exe" ]]; then
+              echo "✅ Build successful: lyricstator.exe found"
+              ls -la build/Release/ 2>/dev/null || ls -la build/
+            else
+              echo "❌ Build failed: lyricstator.exe not found"
+              ls -la build/
+              exit 1
+            fi
           fi
 
       # -------------------------------
@@ -158,4 +244,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lyricstator-build-${{ runner.os }}-${{ matrix.arch }}
-          path: build/
+          path: |
+            build/lyricstator
+            build/Release/lyricstator.exe
+            build/lyricstator.exe
+            build/*.so
+            build/*.dll
+          if-no-files-found: warn
