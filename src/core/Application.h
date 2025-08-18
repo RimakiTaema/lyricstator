@@ -1,4 +1,5 @@
 #pragma once
+#include <SDL.h>
 #include "common/Types.h"
 #include <memory>
 #include <functional>
