@@ -10,22 +10,24 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        arch: [x86_64, arm64]
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            arch: x86_64
+            target: x86_64-linux-gnu
+          # Linux arm64 (cross-compilation)
+          - os: ubuntu-latest
+            arch: arm64
+            target: aarch64-linux-gnu
+          # Windows x86_64
+          - os: windows-latest
+            arch: x86_64
+            target: x86_64-windows
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-
-      # -------------------------------
-      # Detect Windows ARM64 and skip
-      # -------------------------------
-      - name: Skip Windows ARM64
-        if: runner.os == 'Windows' && matrix.arch == 'arm64'
-        run: |
-          echo "Windows ARM64 detected — exiting workflow."
-          exit 0
+        uses: actions/checkout@v4
 
       # -------------------------------
       # Linux dependencies & build
@@ -40,13 +42,34 @@ jobs:
             libmpg123-dev libpulse-dev libfreetype6-dev \
             libglib2.0-dev libglib2.0-dev-bin libx11-dev
 
+      # Setup cross-compilation for Linux ARM64
+      - name: Setup Linux ARM64 cross-compilation
+        if: runner.os == 'Linux' && matrix.arch == 'arm64'
+        run: |
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+            libc6-dev-arm64-cross
+          # Install ARM64 development libraries
+          sudo apt install -y libasound2-dev:arm64 libjack-jackd2-dev:arm64 \
+            libsndfile1-dev:arm64 libvorbis-dev:arm64 libogg-dev:arm64 \
+            libopus-dev:arm64 libflac-dev:arm64 libmpg123-dev:arm64 \
+            libpulse-dev:arm64 libfreetype6-dev:arm64 libglib2.0-dev:arm64 \
+            libx11-dev:arm64
+          # Add ARM64 architecture
+          sudo dpkg --add-architecture arm64
+          sudo apt update
+
       - name: Build OpusFile (Linux)
         if: runner.os == 'Linux'
         run: |
           git clone https://github.com/xiph/opusfile.git
           cd opusfile
           ./autogen.sh
-          ./configure --prefix=$HOME/opusfile
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            ./configure --prefix=$HOME/opusfile --host=aarch64-linux-gnu \
+              CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++
+          else
+            ./configure --prefix=$HOME/opusfile
+          fi
           make -j$(nproc)
           make install
           export PKG_CONFIG_PATH=$HOME/opusfile/lib/pkgconfig:$PKG_CONFIG_PATH
@@ -59,7 +82,18 @@ jobs:
           cd fluidsynth
           git checkout v4.2.2
           mkdir build && cd build
-          cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth \
+              -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+              -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
+              -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+              -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+              -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
+          else
+            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth
+          fi
           make -j$(nproc)
           make install
           export PKG_CONFIG_PATH=$HOME/fluidsynth/lib/pkgconfig:$PKG_CONFIG_PATH
@@ -69,7 +103,7 @@ jobs:
       # Windows dependencies
       # -------------------------------
       - name: Setup Windows dependencies
-        if: runner.os == 'Windows' && matrix.arch != 'arm64'
+        if: runner.os == 'Windows'
         run: |
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --yes
           choco install git --yes
@@ -81,16 +115,34 @@ jobs:
       - name: Build Lyricstator
         run: |
           if [[ "${{ runner.os }}" == "Linux" ]]; then
-            mkdir -p build && cd build \
-            cmake .. \
-              -DBUILD_SHARED_LIBS=OFF \
-              -DSDL_SHARED=OFF \
-              -DSDL_STATIC=ON \
-              -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
+            mkdir -p build && cd build
+            if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+              # Cross-compile for ARM64
+              cmake .. \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DSDL_SHARED=OFF \
+                -DSDL_STATIC=ON \
+                -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth" \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+                -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+                -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+                -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
+                -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+                -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+                -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
+            else
+              # Native x86_64 build
+              cmake .. \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DSDL_SHARED=OFF \
+                -DSDL_STATIC=ON \
+                -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
+            fi
             cmake --build . -- -j$(nproc)
           fi
-          if [[ "${{ runner.os }}" == "Windows" && "${{ matrix.arch }}" != 'arm64' ]]; then
-            mkdir -p build && cd build \
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            mkdir -p build && cd build
             cmake .. \
               -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
               -DBUILD_SHARED_LIBS=OFF \

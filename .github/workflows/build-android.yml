@@ -1,0 +1,218 @@
+name: Build Lyricstator (Android)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86, x86_64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: 34.0.0
+          ndk-version: 25.2.9519653
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache NDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_NDK_ROOT }}
+          key: ${{ runner.os }}-ndk-25.2.9519653
+
+      - name: Setup Android NDK
+        run: |
+          echo "ANDROID_NDK_ROOT=$ANDROID_NDK_LATEST" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST" >> $GITHUB_ENV
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake ninja-build
+
+      - name: Prepare Android assets
+        run: |
+          # Copy assets to Android project
+          mkdir -p android/app/src/main/assets
+          if [ -d "assets" ]; then
+            cp -r assets/* android/app/src/main/assets/
+          fi
+          if [ -d "samples" ]; then
+            cp -r samples android/app/src/main/assets/
+          fi
+
+      - name: Check Android project structure
+        run: |
+          ls -la android/
+          ls -la android/app/
+          if [ -f "android/app/src/main/cpp/CMakeLists.txt" ]; then
+            echo "Found Android CMakeLists.txt"
+            cat android/app/src/main/cpp/CMakeLists.txt
+          else
+            echo "Android CMakeLists.txt not found, creating basic one"
+            mkdir -p android/app/src/main/cpp
+            cat > android/app/src/main/cpp/CMakeLists.txt << 'EOF'
+cmake_minimum_required(VERSION 3.22.1)
+project(lyricstator)
+
+# Include main project CMakeLists.txt
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Add the main source directory
+add_subdirectory(../../../../ lyricstator_main)
+
+# Link Android-specific libraries
+find_library(log-lib log)
+find_library(android-lib android)
+
+target_link_libraries(${PROJECT_NAME}
+    ${log-lib}
+    ${android-lib}
+)
+EOF
+          fi
+
+      - name: Create Android main activity (if not exists)
+        run: |
+          mkdir -p android/app/src/main/java/com/lyricstator/app
+          if [ ! -f "android/app/src/main/java/com/lyricstator/app/MainActivity.java" ]; then
+            cat > android/app/src/main/java/com/lyricstator/app/MainActivity.java << 'EOF'
+package com.lyricstator.app;
+
+import android.app.Activity;
+import android.os.Bundle;
+import org.libsdl.app.SDLActivity;
+
+public class MainActivity extends SDLActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    protected String[] getLibraries() {
+        return new String[] {
+            "SDL2",
+            "SDL2_mixer",
+            "SDL2_ttf", 
+            "SDL2_image",
+            "lyricstator"
+        };
+    }
+}
+EOF
+          fi
+
+      - name: Create Android manifest (if not exists)
+        run: |
+          mkdir -p android/app/src/main
+          if [ ! -f "android/app/src/main/AndroidManifest.xml" ]; then
+            cat > android/app/src/main/AndroidManifest.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.lyricstator.app">
+
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+        
+        <activity android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboardHidden|orientation|screenSize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+EOF
+          fi
+
+      - name: Create strings.xml
+        run: |
+          mkdir -p android/app/src/main/res/values
+          cat > android/app/src/main/res/values/strings.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lyricstator</string>
+</resources>
+EOF
+
+      - name: Download SDL2 Android libraries
+        run: |
+          # Download SDL2 development libraries for Android
+          wget -q https://github.com/libsdl-org/SDL/releases/download/release-2.30.0/SDL2-2.30.0.tar.gz
+          tar -xzf SDL2-2.30.0.tar.gz
+          wget -q https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.0/SDL2_mixer-2.8.0.tar.gz  
+          tar -xzf SDL2_mixer-2.8.0.tar.gz
+          wget -q https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-2.22.0.tar.gz
+          tar -xzf SDL2_ttf-2.22.0.tar.gz
+          wget -q https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2.tar.gz
+          tar -xzf SDL2_image-2.8.2.tar.gz
+          
+          # Copy SDL Android project files
+          mkdir -p android/app/src/main/java/org/libsdl/app
+          cp -r SDL2-2.30.0/android-project/app/src/main/java/org/libsdl/app/* android/app/src/main/java/org/libsdl/app/
+
+      - name: Build Android APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean
+          ./gradlew assembleDebug -PABI_FILTER=${{ matrix.abi }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyricstator-android-${{ matrix.abi }}-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+
+      - name: Build Android AAB (Release)
+        if: matrix.abi == 'arm64-v8a'  # Only build AAB for one architecture
+        working-directory: android
+        run: |
+          ./gradlew bundleRelease
+
+      - name: Upload AAB artifact
+        if: matrix.abi == 'arm64-v8a'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyricstator-android-release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
