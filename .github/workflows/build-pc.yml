@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        arch: [x86_64, arm64]
+        arch: [x86_64]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -19,38 +19,57 @@ jobs:
         uses: actions/checkout@v3
 
       # -------------------------------
-      # Linux dependencies
+      # Linux: build FluidSynth from source
       # -------------------------------
-      - name: Install Linux dependencies
+      - name: Build FluidSynth (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt update
           sudo apt install -y build-essential cmake git g++ pkg-config \
-            libsdl2-dev libvorbis-dev libogg-dev libflac-dev libmpg123-dev \
-            libopus-dev libopusfile-dev libxmp-dev libmodplug-dev \
-            libfluidsynth-dev libmad0-dev libmikmod-dev libwavpack-dev \
-            libsndfile1-dev libfreetype-dev libjpeg-dev libpng-dev libtiff-dev \
-            libwebp-dev zlib1g-dev mingw-w64 libfluidsynth-dev
+            libglib2.0-dev libsndfile1-dev libasound2-dev libjack-jackd2-dev \
+            libpulse-dev
+          
+          git clone https://github.com/FluidSynth/fluidsynth.git
+          cd fluidsynth
+          mkdir build && cd build
+          cmake .. -DBUILD_SHARED_LIBS=ON -Denable-portaudio=OFF -Denable-dbus=OFF
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
 
       # -------------------------------
-      # Windows dependencies
+      # Windows: install with vcpkg
       # -------------------------------
-      - name: Install Windows dependencies
+      - name: Install vcpkg and dependencies
         if: runner.os == 'Windows'
         run: |
-          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --yes
-          choco install git --yes
-          choco install mingw --yes
+          git clone https://github.com/microsoft/vcpkg.git
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+          .\vcpkg install sdl2 sdl2-mixer[fluidsynth] sdl2-image sdl2-ttf `
+              freetype libpng libjpeg-turbo tgui sfml jsoncpp
+          echo "VCPKG_ROOT=$PWD" >> $env:GITHUB_ENV
 
       # -------------------------------
-      # Configure & build
+      # Configure & build project
       # -------------------------------
       - name: Configure & build
         run: |
           mkdir -p build && cd build
-          cmake .. -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
-          cmake --build . --config Release -- -j$(nproc)
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            cmake .. -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
+            cmake --build . -- -j$(nproc)
+          else
+            cmake .. -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake `
+                     -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
+            cmake --build . --config Release -- /m
+          fi
 
       # -------------------------------
       # Upload artifacts
       # -------------------------------
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: Lyricstator-${{ matrix.os }}
+          path: build/
