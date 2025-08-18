@@ -11,29 +11,20 @@ jobs:
       matrix:
         include:
           # -------------------------------
-          # Build Libs for Linux x86_64
+          # Linux x86_64 libraries
           # -------------------------------
           - os: ubuntu-latest
             arch: x86_64
             role: libs
-
-          # -------------------------------
-          # Build Linux x86_64 app
-          # -------------------------------
+          # Linux x86_64 app
           - os: ubuntu-latest
             arch: x86_64
             role: app
-
-          # -------------------------------
-          # Build Linux ARM64 app (cross)
-          # -------------------------------
+          # Linux ARM64 app (cross-compile)
           - os: ubuntu-latest
             arch: arm64
             role: app
-
-          # -------------------------------
-          # Build Windows x86_64 app
-          # -------------------------------
+          # Windows x86_64 app
           - os: windows-latest
             arch: x86_64
             role: app
@@ -56,6 +47,21 @@ jobs:
             libvorbis-dev libogg-dev libopus-dev libflac-dev \
             libmpg123-dev libpulse-dev libfreetype6-dev \
             libglib2.0-dev libx11-dev
+
+      # -------------------------------
+      # Linux ARM64 extensions
+      # -------------------------------
+      - name: Install ARM64 libraries (cross)
+        if: runner.os == 'Linux' && matrix.arch == 'arm64'
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo apt update
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
+          sudo apt install -y libasound2-dev:arm64 libjack-jackd2-dev:arm64 \
+                              libsndfile1-dev:arm64 libvorbis-dev:arm64 libogg-dev:arm64 \
+                              libopus-dev:arm64 libflac-dev:arm64 libmpg123-dev:arm64 \
+                              libpulse-dev:arm64 libfreetype6-dev:arm64 libglib2.0-dev:arm64 \
+                              libx11-dev:arm64 || true
 
       # -------------------------------
       # Windows dependencies
@@ -108,7 +114,6 @@ jobs:
       - name: Build Lyricstator (Linux ARM64 cross)
         if: runner.os == 'Linux' && matrix.role == 'app' && matrix.arch == 'arm64'
         run: |
-          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
           mkdir -p build && cd build
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
@@ -142,7 +147,7 @@ jobs:
       # -------------------------------
       # Upload artifacts
       # -------------------------------
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: lyricstator-${{ matrix.os }}-${{ matrix.arch }}
