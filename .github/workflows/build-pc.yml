@@ -10,8 +10,16 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        arch: [x86_64]
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            triplet: x64-linux
+          - os: ubuntu-latest
+            arch: arm64
+            triplet: arm64-linux
+          - os: windows-latest
+            arch: x86_64
+            triplet: x64-windows
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -19,26 +27,47 @@ jobs:
         uses: actions/checkout@v3
 
       # -------------------------------
-      # Linux: build FluidSynth from source
+      # Linux dependencies and cross-compiler
       # -------------------------------
-      - name: Build FluidSynth (Linux)
+      - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt update
           sudo apt install -y build-essential cmake git g++ pkg-config \
             libglib2.0-dev libsndfile1-dev libasound2-dev libjack-jackd2-dev \
             libpulse-dev
-          
+
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          fi
+
+      # -------------------------------
+      # Build FluidSynth (Linux only)
+      # -------------------------------
+      - name: Build FluidSynth from source (Linux)
+        if: runner.os == 'Linux'
+        run: |
           git clone https://github.com/FluidSynth/fluidsynth.git
           cd fluidsynth
           mkdir build && cd build
-          cmake .. -DBUILD_SHARED_LIBS=ON -Denable-portaudio=OFF -Denable-dbus=OFF
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            cmake .. \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+              -DBUILD_SHARED_LIBS=ON \
+              -Denable-portaudio=OFF \
+              -Denable-dbus=OFF
+          else
+            cmake .. -DBUILD_SHARED_LIBS=ON -Denable-portaudio=OFF -Denable-dbus=OFF
+          fi
           make -j$(nproc)
           sudo make install
           sudo ldconfig
 
       # -------------------------------
-      # Windows: install with vcpkg
+      # Windows dependencies via vcpkg
       # -------------------------------
       - name: Install vcpkg and dependencies
         if: runner.os == 'Windows'
@@ -51,13 +80,22 @@ jobs:
           echo "VCPKG_ROOT=$PWD" >> $env:GITHUB_ENV
 
       # -------------------------------
-      # Configure & build project
+      # Configure & build Lyricstator
       # -------------------------------
       - name: Configure & build
         run: |
           mkdir -p build && cd build
           if [ "${{ runner.os }}" = "Linux" ]; then
-            cmake .. -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
+            if [ "${{ matrix.arch }}" = "arm64" ]; then
+              cmake .. \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+                -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+                -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+                -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
+            else
+              cmake .. -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
+            fi
             cmake --build . -- -j$(nproc)
           else
             cmake .. -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake `
@@ -71,5 +109,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: Lyricstator-${{ matrix.os }}
+          name: Lyricstator-${{ matrix.os }}-${{ matrix.arch }}
           path: build/
