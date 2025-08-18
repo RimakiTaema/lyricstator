@@ -60,26 +60,34 @@ jobs:
           # Add ARM64 architecture first
           sudo dpkg --add-architecture arm64
           
-          # Configure sources.list for ARM64 packages using ports.ubuntu.com
+          # Configure sources for ARM64 packages using ports.ubuntu.com
           UBUNTU_CODENAME=$(lsb_release -cs)
           echo "Setting up ARM64 repositories for Ubuntu $UBUNTU_CODENAME"
           
-          # Add ARM64 repositories to sources.list
-          echo "# ARM64 repositories via ports.ubuntu.com" | sudo tee -a /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          # Create a separate sources file for ARM64 to avoid conflicts
+          {
+            echo "# ARM64 repositories via ports.ubuntu.com"
+            echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME main restricted universe multiverse"
+            echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME-updates main restricted universe multiverse"
+            echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME-security main restricted universe multiverse"
+            echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME-backports main restricted universe multiverse"
+          } | sudo tee /etc/apt/sources.list.d/arm64-ports.list > /dev/null
           
-          # Restrict existing sources to amd64 architecture to avoid conflicts
-          if [ -f /etc/apt/sources.list ]; then
-            sudo sed -i '/^deb.*ubuntu\.com/ s/^deb /deb [arch=amd64] /' /etc/apt/sources.list
-            sudo sed -i '/^deb.*security\.ubuntu\.com/ s/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          # Restrict existing sources to amd64 architecture only
+          # Handle DEB822 format sources (newer Ubuntu versions)
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+            echo "Configuring DEB822 format sources for amd64 only"
+            sudo sed -i 's/^Architectures:.*/Architectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources
           fi
           
-          # Handle new DEB822 format sources if they exist
-          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-            sudo sed -i 's/^Architectures: .*/Architectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources
+          # Handle traditional sources.list format
+          if [ -f /etc/apt/sources.list ]; then
+            echo "Configuring traditional sources.list for amd64 only"
+            # Create backup
+            sudo cp /etc/apt/sources.list /etc/apt/sources.list.backup
+            # Add [arch=amd64] to lines that don't already have architecture specified
+            sudo sed -i '/^deb / { /\[arch=/ !s/^deb /deb [arch=amd64] / }' /etc/apt/sources.list
+            sudo sed -i '/^deb-src / { /\[arch=/ !s/^deb-src /deb-src [arch=amd64] / }' /etc/apt/sources.list
           fi
           
           sudo apt update
