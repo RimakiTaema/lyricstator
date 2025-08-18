@@ -1,9 +1,8 @@
-name: Build Lyricstator (PC - Linux & Windows)
+name: Build Lyricstator (PC)
 
 on:
   push:
     branches: [ main ]
-  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -11,39 +10,44 @@ jobs:
     strategy:
       matrix:
         include:
-          # Linux x86_64
+          # -------------------------------
+          # Build Libs for Linux x86_64
+          # -------------------------------
           - os: ubuntu-latest
             arch: x86_64
-            target: x86_64-linux-gnu
-          # Linux arm64 (cross-compilation)
+            role: libs
+
+          # -------------------------------
+          # Build Linux x86_64 app
+          # -------------------------------
+          - os: ubuntu-latest
+            arch: x86_64
+            role: app
+
+          # -------------------------------
+          # Build Linux ARM64 app (cross)
+          # -------------------------------
           - os: ubuntu-latest
             arch: arm64
-            target: aarch64-linux-gnu
-          # Windows x86_64
+            role: app
+
+          # -------------------------------
+          # Build Windows x86_64 app
+          # -------------------------------
           - os: windows-latest
             arch: x86_64
-            target: x86_64-windows
+            role: app
+
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Add caching for apt packages
-      - name: Cache apt packages
-        if: runner.os == 'Linux'
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-apt-${{ matrix.arch }}-${{ hashFiles('**/workflows/build-pc.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-${{ matrix.arch }}-
-            ${{ runner.os }}-apt-
-
       # -------------------------------
-      # Linux dependencies & build
+      # Linux dependencies
       # -------------------------------
-      - name: Setup Linux dependencies
+      - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt update
@@ -51,187 +55,78 @@ jobs:
             libasound2-dev libjack-jackd2-dev libsndfile1-dev \
             libvorbis-dev libogg-dev libopus-dev libflac-dev \
             libmpg123-dev libpulse-dev libfreetype6-dev \
-            libglib2.0-dev libglib2.0-dev-bin libx11-dev
+            libglib2.0-dev libx11-dev
 
-      # Setup cross-compilation for Linux ARM64
-      - name: Setup Linux ARM64 cross-compilation
-        if: runner.os == 'Linux' && matrix.arch == 'arm64'
+      # -------------------------------
+      # Windows dependencies
+      # -------------------------------
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
         run: |
-          # Add ARM64 architecture first
-          sudo dpkg --add-architecture arm64
-          
-          # Configure sources for ARM64 packages using ports.ubuntu.com
-          UBUNTU_CODENAME=$(lsb_release -cs)
-          echo "Setting up ARM64 repositories for Ubuntu $UBUNTU_CODENAME"
-          
-          # Create a separate sources file for ARM64 to avoid conflicts
-          {
-            echo "# ARM64 repositories via ports.ubuntu.com"
-            echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME main restricted universe multiverse"
-            echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME-updates main restricted universe multiverse"
-            echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME-security main restricted universe multiverse"
-            echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $UBUNTU_CODENAME-backports main restricted universe multiverse"
-          } | sudo tee /etc/apt/sources.list.d/arm64-ports.list > /dev/null
-          
-          # Restrict existing sources to amd64 architecture only
-          # Handle DEB822 format sources (newer Ubuntu versions)
-          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-            echo "Configuring DEB822 format sources for amd64 only"
-            sudo sed -i 's/^Architectures:.*/Architectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources
-          fi
-          
-          # Handle traditional sources.list format
-          if [ -f /etc/apt/sources.list ]; then
-            echo "Configuring traditional sources.list for amd64 only"
-            # Create backup
-            sudo cp /etc/apt/sources.list /etc/apt/sources.list.backup
-            # Add [arch=amd64] to lines that don't already have architecture specified
-            sudo sed -i '/^deb / { /\[arch=/ !s/^deb /deb [arch=amd64] / }' /etc/apt/sources.list
-            sudo sed -i '/^deb-src / { /\[arch=/ !s/^deb-src /deb-src [arch=amd64] / }' /etc/apt/sources.list
-          fi
-          
-          sudo apt update
-          
-          # Install cross-compilation tools
-          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            libc6-dev-arm64-cross
-            
-          # Install ARM64 development libraries with retry on failure
-          sudo apt install -y --fix-missing \
-            libasound2-dev:arm64 \
-            libjack-jackd2-dev:arm64 \
-            libsndfile1-dev:arm64 \
-            libvorbis-dev:arm64 \
-            libogg-dev:arm64 \
-            libopus-dev:arm64 \
-            libflac-dev:arm64 \
-            libmpg123-dev:arm64 \
-            libpulse-dev:arm64 \
-            libfreetype6-dev:arm64 \
-            libglib2.0-dev:arm64 \
-            libx11-dev:arm64 || {
-              echo "Some packages failed to install, trying individual installation..."
-              for pkg in libasound2-dev:arm64 libjack-jackd2-dev:arm64 libsndfile1-dev:arm64 \
-                        libvorbis-dev:arm64 libogg-dev:arm64 libopus-dev:arm64 libflac-dev:arm64 \
-                        libmpg123-dev:arm64 libpulse-dev:arm64 libfreetype6-dev:arm64 \
-                        libglib2.0-dev:arm64 libx11-dev:arm64; do
-                echo "Installing $pkg..."
-                sudo apt install -y "$pkg" || echo "Warning: Failed to install $pkg"
-              done
-            }
+          choco install cmake git mingw --yes
 
-      # Cache OpusFile build
-      - name: Cache OpusFile
-        if: runner.os == 'Linux'
-        id: cache-opusfile
-        uses: actions/cache@v4
-        with:
-          path: ~/opusfile
-          key: opusfile-${{ runner.os }}-${{ matrix.arch }}-v1
-
-      - name: Build OpusFile (Linux)
-        if: runner.os == 'Linux' && steps.cache-opusfile.outputs.cache-hit != 'true'
+      # -------------------------------
+      # Build libraries (Linux x86_64 only)
+      # -------------------------------
+      - name: Build OpusFile & FluidSynth (Linux x86_64)
+        if: runner.os == 'Linux' && matrix.role == 'libs' && matrix.arch == 'x86_64'
         run: |
           git clone --depth 1 https://github.com/xiph/opusfile.git
           cd opusfile
           ./autogen.sh
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            ./configure --prefix=$HOME/opusfile --host=aarch64-linux-gnu \
-              CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
-              PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
-          else
-            ./configure --prefix=$HOME/opusfile
-          fi
+          ./configure --prefix=$HOME/opusfile
           make -j$(nproc)
           make install
           cd ..
 
-      # Cache FluidSynth build
-      - name: Cache FluidSynth
-        if: runner.os == 'Linux'
-        id: cache-fluidsynth
-        uses: actions/cache@v4
-        with:
-          path: ~/fluidsynth
-          key: fluidsynth-${{ runner.os }}-${{ matrix.arch }}-v2.4.7
-
-      - name: Build FluidSynth v2.4.7 (Linux)
-        if: runner.os == 'Linux' && steps.cache-fluidsynth.outputs.cache-hit != 'true'
-        run: |
           git clone --depth 1 --branch v2.4.7 https://github.com/FluidSynth/fluidsynth.git
           cd fluidsynth
           mkdir build && cd build
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth \
-              -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-              -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
-              -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-              -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-              -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-              -DCMAKE_BUILD_TYPE=Release
-          else
-            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth \
-              -DCMAKE_BUILD_TYPE=Release
-          fi
+          cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth
           make -j$(nproc)
           make install
           cd ../..
 
       # -------------------------------
-      # Windows dependencies
+      # Build Lyricstator (Linux x86_64)
       # -------------------------------
-      - name: Setup Windows dependencies
-        if: runner.os == 'Windows'
-        run: |
-          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --yes
-          choco install git --yes
-          choco install mingw --yes
-
-      # -------------------------------
-      # Build Lyricstator
-      # -------------------------------
-      - name: Setup environment variables
-        run: |
-          if [[ "${{ runner.os }}" == "Linux" ]]; then
-            echo "PKG_CONFIG_PATH=$HOME/opusfile/lib/pkgconfig:$HOME/fluidsynth/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
-          fi
-
-      - name: Build Lyricstator (Linux)
-        if: runner.os == 'Linux'
+      - name: Build Lyricstator (Linux x86_64)
+        if: runner.os == 'Linux' && matrix.role == 'app' && matrix.arch == 'x86_64'
         run: |
           mkdir -p build && cd build
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            # Cross-compile for ARM64
-            cmake .. \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=OFF \
-              -DSDL_SHARED=OFF \
-              -DSDL_STATIC=ON \
-              -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth" \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-              -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
-              -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-              -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-              -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-              -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
-          else
-            # Native x86_64 build
-            cmake .. \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=OFF \
-              -DSDL_SHARED=OFF \
-              -DSDL_STATIC=ON \
-              -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
-          fi
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DSDL_SHARED=OFF \
+            -DSDL_STATIC=ON \
+            -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
           cmake --build . --parallel $(nproc)
 
-      - name: Build Lyricstator (Windows)
-        if: runner.os == 'Windows'
+      # -------------------------------
+      # Build Lyricstator (Linux ARM64)
+      # -------------------------------
+      - name: Build Lyricstator (Linux ARM64 cross)
+        if: runner.os == 'Linux' && matrix.role == 'app' && matrix.arch == 'arm64'
+        run: |
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
+          mkdir -p build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DSDL_SHARED=OFF \
+            -DSDL_STATIC=ON \
+            -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth" \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+          cmake --build . --parallel $(nproc)
+
+      # -------------------------------
+      # Build Lyricstator (Windows x86_64)
+      # -------------------------------
+      - name: Build Lyricstator (Windows x86_64)
+        if: runner.os == 'Windows' && matrix.role == 'app'
         shell: pwsh
         run: |
           mkdir -p build
@@ -245,38 +140,12 @@ jobs:
           cmake --build . --config Release --parallel
 
       # -------------------------------
-      # Validate build
-      # -------------------------------
-      - name: Validate build output
-        run: |
-          if [[ "${{ runner.os }}" == "Linux" ]]; then
-            if [[ -f "build/lyricstator" ]]; then
-              echo "✅ Build successful: lyricstator binary found"
-              file build/lyricstator
-              ls -la build/lyricstator
-            else
-              echo "❌ Build failed: lyricstator binary not found"
-              ls -la build/
-              exit 1
-            fi
-          elif [[ "${{ runner.os }}" == "Windows" ]]; then
-            if [[ -f "build/Release/lyricstator.exe" ]] || [[ -f "build/lyricstator.exe" ]]; then
-              echo "✅ Build successful: lyricstator.exe found"
-              ls -la build/Release/ 2>/dev/null || ls -la build/
-            else
-              echo "❌ Build failed: lyricstator.exe not found"
-              ls -la build/
-              exit 1
-            fi
-          fi
-
-      # -------------------------------
       # Upload artifacts
       # -------------------------------
-      - name: Upload build artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lyricstator-build-${{ runner.os }}-${{ matrix.arch }}
+          name: lyricstator-${{ matrix.os }}-${{ matrix.arch }}
           path: |
             build/lyricstator
             build/Release/lyricstator.exe
