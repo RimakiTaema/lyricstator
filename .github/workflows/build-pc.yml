@@ -69,7 +69,7 @@ jobs:
       # Windows dependencies
       # -------------------------------
       - name: Setup Windows dependencies
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.arch != 'arm64'
         run: |
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --yes
           choco install git --yes
@@ -89,7 +89,7 @@ jobs:
               -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
             cmake --build . -- -j$(nproc)
           fi
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
+          if [[ "${{ runner.os }}" == "Windows" && "${{ matrix.arch }}" != 'arm64' ]]; then
             cmake .. \
               -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
               -DBUILD_SHARED_LIBS=OFF \
