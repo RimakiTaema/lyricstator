@@ -30,7 +30,7 @@ jobs:
             libopus-dev libopusfile-dev libxmp-dev libmodplug-dev \
             libfluidsynth-dev libmad0-dev libmikmod-dev libwavpack-dev \
             libsndfile1-dev libfreetype-dev libjpeg-dev libpng-dev libtiff-dev \
-            libwebp-dev zlib1g-dev mingw-w64 libfluidsynth2 libfluidsynth-dev
+            libwebp-dev zlib1g-dev mingw-w64 libfluidsynth-dev
 
       # -------------------------------
       # Windows dependencies
