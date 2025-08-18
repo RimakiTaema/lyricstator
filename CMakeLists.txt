@@ -55,20 +55,6 @@ FetchContent_Declare(
 )
 
 # ------------------------------
-# FluidSynth (auto-build)
-# ------------------------------
-FetchContent_Declare(
-    FluidSynth
-    GIT_REPOSITORY https://github.com/FluidSynth/fluidsynth.git
-    GIT_TAG 2.3.0
-    GIT_SHALLOW TRUE
-)
-
-# Optional: control FluidSynth build options
-set(FLUIDSYNTH_BUILD_SHARED ON CACHE BOOL "" FORCE)
-set(FLUIDSYNTH_USE_PKGCONFIG OFF CACHE BOOL "" FORCE)
-
-# ------------------------------
 # SFML (required for TGUI)
 # ------------------------------
 FetchContent_Declare(
@@ -105,9 +91,9 @@ FetchContent_Declare(
 )
 
 # ------------------------------
-# Make all dependencies available
+# Make dependencies available
 # ------------------------------
-FetchContent_MakeAvailable(SDL2 SDL2_mixer SDL2_ttf SDL2_image SFML TGUI jsoncpp FluidSynth)
+FetchContent_MakeAvailable(SDL2 SDL2_mixer SDL2_ttf SDL2_image SFML TGUI jsoncpp)
 
 # ------------------------------
 # Compiler options
@@ -137,7 +123,7 @@ find_package(Threads REQUIRED)
 include_directories(src)
 
 # ------------------------------
-# Sources
+# Source files
 # ------------------------------
 set(CORE_SOURCES
     src/main.cpp
@@ -213,7 +199,6 @@ target_link_libraries(${PROJECT_NAME}
     sfml-system
     jsoncpp_lib
     Threads::Threads
-    FluidSynth::fluidsynth
 )
 
 # ------------------------------
