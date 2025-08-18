@@ -1,4 +1,4 @@
-name: Build Lyricstator (PC)
+name: Build Lyricstator
 
 on:
   push:
@@ -6,40 +6,43 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  # -------------------------------
+  # 1️⃣ Setup Repo (runs for all OS/arch)
+  # -------------------------------
+  setup-repo:
     strategy:
       matrix:
         include:
-          # -------------------------------
-          # Linux x86_64 libraries
-          # -------------------------------
           - os: ubuntu-latest
             arch: x86_64
-            role: libs
-          # Linux x86_64 app
-          - os: ubuntu-latest
-            arch: x86_64
-            role: app
-          # Linux ARM64 app (cross-compile)
           - os: ubuntu-latest
             arch: arm64
-            role: app
-          # Windows x86_64 app
           - os: windows-latest
             arch: x86_64
-            role: app
-
     runs-on: ${{ matrix.os }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # -------------------------------
-      # Linux dependencies
-      # -------------------------------
+      - name: Set up Git
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+  # -------------------------------
+  # 2️⃣ Build Libraries (Linux only)
+  # -------------------------------
+  build-libs:
+    needs: setup-repo
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+          - arch: arm64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Install Linux dependencies
-        if: runner.os == 'Linux'
         run: |
           sudo apt update
           sudo apt install -y build-essential git cmake pkg-config \
@@ -48,11 +51,8 @@ jobs:
             libmpg123-dev libpulse-dev libfreetype6-dev \
             libglib2.0-dev libx11-dev
 
-      # -------------------------------
-      # Linux ARM64 extensions
-      # -------------------------------
       - name: Install ARM64 libraries (cross)
-        if: runner.os == 'Linux' && matrix.arch == 'arm64'
+        if: matrix.arch == 'arm64'
         run: |
           sudo dpkg --add-architecture arm64
           sudo apt update
@@ -63,75 +63,97 @@ jobs:
                               libpulse-dev:arm64 libfreetype6-dev:arm64 libglib2.0-dev:arm64 \
                               libx11-dev:arm64 || true
 
-      # -------------------------------
-      # Windows dependencies
-      # -------------------------------
-      - name: Install Windows dependencies
-        if: runner.os == 'Windows'
-        run: |
-          choco install cmake git mingw --yes
-
-      # -------------------------------
-      # Build libraries (Linux x86_64 only)
-      # -------------------------------
-      - name: Build OpusFile & FluidSynth (Linux x86_64)
-        if: runner.os == 'Linux' && matrix.role == 'libs' && matrix.arch == 'x86_64'
+      - name: Build OpusFile
         run: |
           git clone --depth 1 https://github.com/xiph/opusfile.git
           cd opusfile
           ./autogen.sh
-          ./configure --prefix=$HOME/opusfile
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            ./configure --prefix=$HOME/opusfile --host=aarch64-linux-gnu \
+                        CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++
+          else
+            ./configure --prefix=$HOME/opusfile
+          fi
           make -j$(nproc)
           make install
-          cd ..
 
+      - name: Build FluidSynth
+        run: |
           git clone --depth 1 --branch v2.4.7 https://github.com/FluidSynth/fluidsynth.git
           cd fluidsynth
           mkdir build && cd build
-          cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth \
+              -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+          else
+            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth
+          fi
           make -j$(nproc)
           make install
-          cd ../..
 
-      # -------------------------------
-      # Build Lyricstator (Linux x86_64)
-      # -------------------------------
-      - name: Build Lyricstator (Linux x86_64)
-        if: runner.os == 'Linux' && matrix.role == 'app' && matrix.arch == 'x86_64'
+      - name: Upload libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: libs-${{ matrix.arch }}
+          path: |
+            $HOME/opusfile
+            $HOME/fluidsynth
+
+  # -------------------------------
+  # 3️⃣ Build App (Linux + Windows)
+  # -------------------------------
+  build-app:
+    needs: build-libs
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu-latest
+            arch: arm64
+          - os: windows-latest
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download libraries
+        if: runner.os == 'Linux'
+        uses: actions/download-artifact@v4
+        with:
+          name: libs-${{ matrix.arch }}
+          path: $HOME
+
+      - name: Build Lyricstator
+        if: runner.os == 'Linux'
         run: |
           mkdir -p build && cd build
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DSDL_SHARED=OFF \
-            -DSDL_STATIC=ON \
-            -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            cmake .. \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_SHARED_LIBS=OFF \
+              -DSDL_SHARED=OFF \
+              -DSDL_STATIC=ON \
+              -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth" \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+          else
+            cmake .. \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_SHARED_LIBS=OFF \
+              -DSDL_SHARED=OFF \
+              -DSDL_STATIC=ON \
+              -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
+          fi
           cmake --build . --parallel $(nproc)
 
-      # -------------------------------
-      # Build Lyricstator (Linux ARM64)
-      # -------------------------------
-      - name: Build Lyricstator (Linux ARM64 cross)
-        if: runner.os == 'Linux' && matrix.role == 'app' && matrix.arch == 'arm64'
-        run: |
-          mkdir -p build && cd build
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DSDL_SHARED=OFF \
-            -DSDL_STATIC=ON \
-            -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth" \
-            -DCMAKE_SYSTEM_NAME=Linux \
-            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
-          cmake --build . --parallel $(nproc)
-
-      # -------------------------------
-      # Build Lyricstator (Windows x86_64)
-      # -------------------------------
-      - name: Build Lyricstator (Windows x86_64)
-        if: runner.os == 'Windows' && matrix.role == 'app'
+      - name: Build Lyricstator (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           mkdir -p build
@@ -144,10 +166,7 @@ jobs:
             -DSDL_STATIC=ON
           cmake --build . --config Release --parallel
 
-      # -------------------------------
-      # Upload artifacts
-      # -------------------------------
-      - name: Upload artifacts
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: lyricstator-${{ matrix.os }}-${{ matrix.arch }}
