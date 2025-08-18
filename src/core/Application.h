@@ -8,6 +8,10 @@
 struct SDL_Window;
 struct SDL_Renderer;
 
+namespace tgui {
+    class Gui;
+}
+
 namespace Lyricstator {
 
 class AudioManager;
@@ -16,13 +20,17 @@ class NoteDetector;
 class LystrParser;
 class LystrInterpreter;
 class Window;
-class KaraokeDisplay;
+class TGUIKaraokeDisplay;
 class UserInterface;
-class ResourcePackGUI;  // Added ResourcePackGUI forward declaration
+class TGUIResourcePackGUI;
+class TGUISongBrowser; // Added TGUISongBrowser forward declaration
+class TGUIEqualizer; // Added TGUIEqualizer forward declaration
+class TGUIKeybindEditor; // Added TGUIKeybindEditor forward declaration
 class SynchronizationManager;
 class FormatExporter;
 class ErrorHandler;
-class AssetManager;  // Added AssetManager forward declaration
+class AssetManager;
+class SettingsManager; // Added SettingsManager forward declaration
 
 class Application {
 public:
@@ -62,21 +70,30 @@ public:
     void SetVolume(float volume);
     void SetPitchDetectionEnabled(bool enabled);
     
+    void HandleKeyBinding(const std::string& action);
+    
 private:
     // Core subsystems
-    std::unique_ptr<AssetManager> assetManager_;  // Added AssetManager
+    std::unique_ptr<AssetManager> assetManager_;
     std::unique_ptr<AudioManager> audioManager_;
     std::unique_ptr<MidiParser> midiParser_;
     std::unique_ptr<NoteDetector> noteDetector_;
     std::unique_ptr<LystrParser> lystrParser_;
     std::unique_ptr<LystrInterpreter> lystrInterpreter_;
     std::unique_ptr<Window> window_;
-    std::unique_ptr<KaraokeDisplay> karaokeDisplay_;
+    std::unique_ptr<TGUIKaraokeDisplay> karaokeDisplay_;
     std::unique_ptr<UserInterface> userInterface_;
-    std::unique_ptr<ResourcePackGUI> resourcePackGUI_;  // Added ResourcePackGUI
+    std::unique_ptr<TGUIResourcePackGUI> resourcePackGUI_;
+    std::unique_ptr<TGUISongBrowser> songBrowser_; // Added TGUISongBrowser member
+    std::unique_ptr<TGUIEqualizer> equalizer_; // Added TGUIEqualizer member
+    std::unique_ptr<TGUIKeybindEditor> keybindEditor_; // Added TGUIKeybindEditor member
     std::unique_ptr<SynchronizationManager> syncManager_;
     std::unique_ptr<FormatExporter> formatExporter_;
     std::unique_ptr<ErrorHandler> errorHandler_;
+    
+    std::unique_ptr<tgui::Gui> gui_;
+    
+    SettingsManager* settingsManager_;
     
     // Application state
     bool running_;
@@ -103,6 +120,10 @@ private:
     void HandleSDLEvents();
     void OnEvent(const AppEvent& event);
     void ShowErrorDialog(const std::string& message, ErrorType type);
+    
+    void InitializeSettings();
+    void OnSettingsChanged(const std::string& setting);
+    void ProcessKeyboardInput(const SDL_Event& event);
     
     // Timing
     TimePoint lastFrameTime_;

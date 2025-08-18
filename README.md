@@ -47,6 +47,7 @@ vcpkg install sdl2 sdl2-mixer sdl2-ttf
 ```
 
 ### Building
+
 ```bash
 # Clone and enter directory
 git clone <repository-url>
@@ -62,6 +63,7 @@ make -j$(nproc)  # Linux/macOS
 ```
 
 ### Running
+
 ```bash
 # Basic execution
 ./Lyricstator
@@ -75,14 +77,15 @@ make -j$(nproc)  # Linux/macOS
 
 ## 🎮 Controls
 
-| Key            | Action     |
-|----------------|------------|
-| `Space`        | Play/Pause |
-| `Escape`       | Stop       |
-| `Ctrl+Q`       | Quit       |
-| **Drag & Drop**| Load files |
+| Key | Action |
+|-----|--------|
+| `Space` | Play/Pause |
+| `Escape` | Stop |
+| `Ctrl+Q` | Quit |
+| **Drag & Drop** | Load files |
 
 ## 📁 Supported Formats
+
 - **Audio**: `.wav`, `.mp3`, `.ogg`
 - **MIDI**: `.mid`, `.midi`
 - **Lyrics**: `.lystr` (custom format)
@@ -125,6 +128,7 @@ make -j$(nproc)
 ```
 
 ## 📊 Architecture
+
 ```
 Lyricstator/
 ├── src/
@@ -143,6 +147,7 @@ Lyricstator/
 ```
 
 ## 🎯 Recent Enhancements
+
 - ✅ **Enhanced visual rendering** with SDL_ttf integration
 - ✅ **Animated backgrounds** and smooth transitions
 - ✅ **Improved pitch visualization** with real-time feedback
@@ -151,6 +156,7 @@ Lyricstator/
 - ✅ **Cross-platform font loading** with fallback support
 
 ## 🤝 Contributing
+
 We welcome contributions! Please see our contributing guidelines for:
 - Code style requirements
 - Testing procedures
@@ -158,9 +164,11 @@ We welcome contributions! Please see our contributing guidelines for:
 - Feature request process
 
 ## 📄 License
+
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🎵 Get Started Today!
+
 Transform your karaoke experience with Lyricstator's advanced features and beautiful visuals. Perfect for:
 - **Home karaoke systems**
 - **Professional venues**
