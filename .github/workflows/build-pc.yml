@@ -153,12 +153,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/fluidsynth
-          key: fluidsynth-${{ runner.os }}-${{ matrix.arch }}-v4.2.2
+          key: fluidsynth-${{ runner.os }}-${{ matrix.arch }}-v2.4.7
 
-      - name: Build FluidSynth v4 (Linux)
+      - name: Build FluidSynth v2.4.7 (Linux)
         if: runner.os == 'Linux' && steps.cache-fluidsynth.outputs.cache-hit != 'true'
         run: |
-          git clone --depth 1 --branch v4.2.2 https://github.com/FluidSynth/fluidsynth.git
+          git clone --depth 1 --branch v2.4.7 https://github.com/FluidSynth/fluidsynth.git
           cd fluidsynth
           mkdir build && cd build
           if [[ "${{ matrix.arch }}" == "arm64" ]]; then
