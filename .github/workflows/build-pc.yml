@@ -13,7 +13,7 @@ jobs:
         include:
           - os: ubuntu-latest
             arch: x86_64
-          - os: ubuntu-22.04-arm64
+          - os: ubuntu-latest
             arch: arm64
           - os: windows-latest
             arch: x86_64
@@ -59,6 +59,16 @@ jobs:
           sudo ldconfig
 
       # -------------------------------
+      # Configure & build (Linux)
+      # -------------------------------
+      - name: Configure & build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
+          cmake --build . -- -j$(nproc)
+
+      # -------------------------------
       # Windows dependencies via vcpkg
       # -------------------------------
       - name: Install vcpkg and dependencies (Windows)
@@ -72,18 +82,17 @@ jobs:
           echo "VCPKG_ROOT=$PWD" >> $env:GITHUB_ENV
 
       # -------------------------------
-      # Configure & build Lyricstator
+      # Configure & build (Windows)
       # -------------------------------
-      - name: Configure & build
+      - name: Configure & build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          mkdir -p build && cd build
-          if [ "${{ runner.os }}" = "Linux" ]; then
-            cmake .. -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
-            cmake --build . -- -j$(nproc)
-          else
-            cmake .. -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake `
-                     -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
-            cmake --build . --config Release -- /m
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake `
+                   -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
+          cmake --build . --config Release -- /m
 
       # -------------------------------
       # Upload build artifacts
