@@ -29,6 +29,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Create cmake directory
+        run: mkdir -p cmake
+
       # -------------------------------
       # Linux dependencies & build
       # -------------------------------
@@ -46,54 +49,51 @@ jobs:
       - name: Setup Linux ARM64 cross-compilation
         if: runner.os == 'Linux' && matrix.arch == 'arm64'
         run: |
-          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            libc6-dev-arm64-cross
-          # Install ARM64 development libraries
-          sudo apt install -y libasound2-dev:arm64 libjack-jackd2-dev:arm64 \
-            libsndfile1-dev:arm64 libvorbis-dev:arm64 libogg-dev:arm64 \
-            libopus-dev:arm64 libflac-dev:arm64 libmpg123-dev:arm64 \
-            libpulse-dev:arm64 libfreetype6-dev:arm64 libglib2.0-dev:arm64 \
-            libx11-dev:arm64
-          # Add ARM64 architecture
-          sudo dpkg --add-architecture arm64
-          sudo apt update
+          # Install cross-compilation toolchain
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          
+          # For ARM64 cross-compilation, we'll use static linking and build dependencies from source
+          # to avoid the complexity of cross-architecture package dependencies
+          echo "ARM64 cross-compilation toolchain installed"
+          echo "Will build dependencies from source for better compatibility"
 
-      - name: Build OpusFile (Linux)
-        if: runner.os == 'Linux'
+      # Set up environment for ARM64 cross-compilation
+      - name: Setup ARM64 environment
+        if: runner.os == 'Linux' && matrix.arch == 'arm64'
+        run: |
+          # Set cross-compilation environment variables
+          echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          echo "CXX=aarch64-linux-gnu-g++" >> $GITHUB_ENV
+          echo "AR=aarch64-linux-gnu-ar" >> $GITHUB_ENV
+          echo "STRIP=aarch64-linux-gnu-strip" >> $GITHUB_ENV
+          
+          # Verify cross-compiler is available
+          aarch64-linux-gnu-gcc --version
+          aarch64-linux-gnu-g++ --version
+          
+          echo "ARM64 cross-compilation environment configured"
+
+      # Build dependencies for x86_64 (existing approach)
+      - name: Build OpusFile (Linux x86_64)
+        if: runner.os == 'Linux' && matrix.arch == 'x86_64'
         run: |
           git clone https://github.com/xiph/opusfile.git
           cd opusfile
           ./autogen.sh
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            ./configure --prefix=$HOME/opusfile --host=aarch64-linux-gnu \
-              CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++
-          else
-            ./configure --prefix=$HOME/opusfile
-          fi
+          ./configure --prefix=$HOME/opusfile
           make -j$(nproc)
           make install
           export PKG_CONFIG_PATH=$HOME/opusfile/lib/pkgconfig:$PKG_CONFIG_PATH
           cd ..
 
-      - name: Build FluidSynth v4 (Linux)
-        if: runner.os == 'Linux'
+      - name: Build FluidSynth v4 (Linux x86_64)
+        if: runner.os == 'Linux' && matrix.arch == 'x86_64'
         run: |
           git clone https://github.com/FluidSynth/fluidsynth.git
           cd fluidsynth
           git checkout v4.2.2
           mkdir build && cd build
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth \
-              -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-              -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
-              -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-              -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-              -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
-          else
-            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth
-          fi
+          cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth
           make -j$(nproc)
           make install
           export PKG_CONFIG_PATH=$HOME/fluidsynth/lib/pkgconfig:$PKG_CONFIG_PATH
@@ -113,16 +113,20 @@ jobs:
       # Build Lyricstator
       # -------------------------------
       - name: Build Lyricstator
+        env:
+          PKG_CONFIG_PATH: ${{ runner.os == 'Linux' && matrix.arch == 'x86_64' && '$HOME/opusfile/lib/pkgconfig:$HOME/fluidsynth/lib/pkgconfig' || '' }}
         run: |
           if [[ "${{ runner.os }}" == "Linux" ]]; then
             mkdir -p build && cd build
             if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-              # Cross-compile for ARM64
+              # Cross-compile for ARM64 - use FetchContent for all dependencies
+              echo "Building for ARM64 using cross-compilation..."
               cmake .. \
+                -DCMAKE_BUILD_TYPE=Release \
                 -DBUILD_SHARED_LIBS=OFF \
                 -DSDL_SHARED=OFF \
                 -DSDL_STATIC=ON \
-                -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth" \
+                -DSDL_TEST=OFF \
                 -DCMAKE_SYSTEM_NAME=Linux \
                 -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
                 -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
@@ -132,14 +136,17 @@ jobs:
                 -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
                 -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY
             else
-              # Native x86_64 build
+              # Native x86_64 build with pre-built dependencies
+              echo "Building for x86_64 using native compilation..."
               cmake .. \
+                -DCMAKE_BUILD_TYPE=Release \
                 -DBUILD_SHARED_LIBS=OFF \
                 -DSDL_SHARED=OFF \
                 -DSDL_STATIC=ON \
                 -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
             fi
-            cmake --build . -- -j$(nproc)
+            echo "Starting build..."
+            cmake --build . --config Release -- -j$(nproc)
           fi
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             mkdir -p build && cd build
