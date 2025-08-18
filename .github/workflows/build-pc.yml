@@ -20,8 +20,18 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      # -------------------------------
+      # Checkout repository
+      # -------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      # -------------------------------
+      # Debug info
+      # -------------------------------
+      - name: Debug info
+        run: |
+          echo "Running on $RUNNER_OS / $RUNNER_ARCH"
 
       # -------------------------------
       # Linux dependencies
@@ -35,9 +45,9 @@ jobs:
             libpulse-dev
 
       # -------------------------------
-      # Build FluidSynth (Linux only)
+      # Build FluidSynth from source (Linux only)
       # -------------------------------
-      - name: Build FluidSynth from source (Linux)
+      - name: Build FluidSynth (Linux)
         if: runner.os == 'Linux'
         run: |
           git clone https://github.com/FluidSynth/fluidsynth.git
@@ -51,7 +61,7 @@ jobs:
       # -------------------------------
       # Windows dependencies via vcpkg
       # -------------------------------
-      - name: Install vcpkg and dependencies
+      - name: Install vcpkg and dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
           git clone https://github.com/microsoft/vcpkg.git
@@ -74,10 +84,9 @@ jobs:
             cmake .. -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake `
                      -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
             cmake --build . --config Release -- /m
-          fi
 
       # -------------------------------
-      # Upload artifacts
+      # Upload build artifacts
       # -------------------------------
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
