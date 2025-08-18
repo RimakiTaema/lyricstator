@@ -10,96 +10,99 @@ jobs:
   build:
     strategy:
       matrix:
-        include:
-          - os: ubuntu-latest
-            arch: x86_64
-          - os: ubuntu-latest
-            arch: arm64
-          - os: windows-latest
-            arch: x86_64
+        os: [ubuntu-latest, windows-latest]
+        arch: [x86_64, arm64]
     runs-on: ${{ matrix.os }}
 
     steps:
-      # -------------------------------
-      # Checkout repository
-      # -------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
 
       # -------------------------------
-      # Debug info
+      # Detect Windows ARM64 and skip
       # -------------------------------
-      - name: Debug info
+      - name: Skip Windows ARM64
+        if: runner.os == 'Windows' && matrix.arch == 'arm64'
         run: |
-          echo "Running on $RUNNER_OS / $RUNNER_ARCH"
+          echo "Windows ARM64 detected — exiting workflow."
+          exit 0
 
       # -------------------------------
-      # Linux dependencies
+      # Linux dependencies & build
       # -------------------------------
-      - name: Install Linux dependencies
+      - name: Setup Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt install -y build-essential cmake git g++ pkg-config \
-            libglib2.0-dev libsndfile1-dev libasound2-dev libjack-jackd2-dev \
-            libpulse-dev
+          sudo apt install -y build-essential git cmake pkg-config \
+            libasound2-dev libjack-jackd2-dev libsndfile1-dev \
+            libvorbis-dev libogg-dev libopus-dev libflac-dev \
+            libmpg123-dev libpulse-dev libfreetype6-dev \
+            libglib2.0-dev libglib2.0-dev-bin libx11-dev
 
-      # -------------------------------
-      # Build FluidSynth from source (Linux only)
-      # -------------------------------
-      - name: Build FluidSynth (Linux)
+      - name: Build OpusFile (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          git clone https://github.com/xiph/opusfile.git
+          cd opusfile
+          ./autogen.sh
+          ./configure --prefix=$HOME/opusfile
+          make -j$(nproc)
+          make install
+          export PKG_CONFIG_PATH=$HOME/opusfile/lib/pkgconfig:$PKG_CONFIG_PATH
+          cd ..
+
+      - name: Build FluidSynth v4 (Linux)
         if: runner.os == 'Linux'
         run: |
           git clone https://github.com/FluidSynth/fluidsynth.git
           cd fluidsynth
+          git checkout v4.2.2
           mkdir build && cd build
-          cmake .. -DBUILD_SHARED_LIBS=ON -Denable-portaudio=OFF -Denable-dbus=OFF
+          cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth
           make -j$(nproc)
-          sudo make install
-          sudo ldconfig
+          make install
+          export PKG_CONFIG_PATH=$HOME/fluidsynth/lib/pkgconfig:$PKG_CONFIG_PATH
+          cd ../..
 
       # -------------------------------
-      # Configure & build (Linux)
+      # Windows dependencies
       # -------------------------------
-      - name: Configure & build (Linux)
-        if: runner.os == 'Linux'
+      - name: Setup Windows dependencies
+        if: runner.os == 'Windows'
+        run: |
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' --yes
+          choco install git --yes
+          choco install mingw --yes
+
+      # -------------------------------
+      # Build Lyricstator
+      # -------------------------------
+      - name: Build Lyricstator
         run: |
           mkdir -p build && cd build
-          cmake .. -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
-          cmake --build . -- -j$(nproc)
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            cmake .. \
+              -DBUILD_SHARED_LIBS=OFF \
+              -DSDL_SHARED=OFF \
+              -DSDL_STATIC=ON \
+              -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
+            cmake --build . -- -j$(nproc)
+          fi
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cmake .. \
+              -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
+              -DBUILD_SHARED_LIBS=OFF \
+              -DSDL_SHARED=OFF \
+              -DSDL_STATIC=ON
+            cmake --build . --config Release -- /m
+          fi
 
       # -------------------------------
-      # Windows dependencies via vcpkg
-      # -------------------------------
-      - name: Install vcpkg and dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          git clone https://github.com/microsoft/vcpkg.git
-          cd vcpkg
-          .\bootstrap-vcpkg.bat
-          .\vcpkg install sdl2 sdl2-mixer[fluidsynth] sdl2-image sdl2-ttf `
-              freetype libpng libjpeg-turbo tgui sfml jsoncpp
-          echo "VCPKG_ROOT=$PWD" >> $env:GITHUB_ENV
-
-      # -------------------------------
-      # Configure & build (Windows)
-      # -------------------------------
-      - name: Configure & build (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake `
-                   -DBUILD_SHARED_LIBS=OFF -DSDL_SHARED=OFF -DSDL_STATIC=ON
-          cmake --build . --config Release -- /m
-
-      # -------------------------------
-      # Upload build artifacts
+      # Upload artifacts
       # -------------------------------
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: Lyricstator-${{ matrix.os }}-${{ matrix.arch }}
+          name: lyricstator-build-${{ runner.os }}-${{ matrix.arch }}
           path: build/
-          retention-days: 7
