@@ -1,154 +1,267 @@
 #include "QtMainWindow.h"
 #include <QApplication>
-#include <QCloseEvent>
+#include <QMenuBar>
+#include <QToolBar>
+#include <QStatusBar>
+#include <QMessageBox>
+#include <QFileDialog>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
 #include <QUrl>
 #include <QList>
 #include <QString>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QMenuBar>
-#include <QToolBar>
-#include <QStatusBar>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QWidget>
-#include <QIcon>
-#include <QStyle>
+#include <QCloseEvent>
 #include <QApplication>
-#include <QDesktopServices>
-#include <QUrl>
+#include <QScreen>
+#include <QDir>
+#include <QFileInfo>
 
 QtMainWindow::QtMainWindow(QWidget *parent)
     : QMainWindow(parent)
     , application_(nullptr)
     , karaokeDisplay_(nullptr)
-    , resourcePackGUI_(nullptr)
     , songBrowser_(nullptr)
+    , resourcePackGUI_(nullptr)
     , equalizer_(nullptr)
     , keybindEditor_(nullptr)
+    , audioSettings_(nullptr)
+    , midiEditor_(nullptr)
+    , lyricEditor_(nullptr)
+    , settings_(nullptr)
+    , helpSystem_(nullptr)
+    , openMidiAction_(nullptr)
+    , openAudioAction_(nullptr)
+    , openLyricsAction_(nullptr)
+    , resourcePackAction_(nullptr)
+    , equalizerAction_(nullptr)
+    , keybindEditorAction_(nullptr)
+    , audioSettingsAction_(nullptr)
+    , midiEditorAction_(nullptr)
+    , lyricEditorAction_(nullptr)
+    , settingsAction_(nullptr)
+    , helpAction_(nullptr)
+    , aboutAction_(nullptr)
+    , exitAction_(nullptr)
 {
-    setWindowTitle("Lyricstator v1.0.0 - Karaoke and Lyric Visualization System");
-    setAcceptDrops(true);
+    setWindowTitle("Lyricstator - Qt6");
+    setWindowIcon(QIcon(":/assets/icon.png"));
+    
+    // Set window size and center on screen
     resize(1200, 800);
+    QScreen* screen = QApplication::primaryScreen();
+    QRect screenGeometry = screen->availableGeometry();
+    int x = (screenGeometry.width() - width()) / 2;
+    int y = (screenGeometry.height() - height()) / 2;
+    move(x, y);
+    
+    // Enable drag and drop
+    setAcceptDrops(true);
     
     setupUI();
-    createActions();
     setupMenuBar();
     setupToolBar();
     setupStatusBar();
-    connectSignals();
-    
-    // Center window on screen
-    setGeometry(
-        QStyle::alignedRect(
-            Qt::LeftToRight,
-            Qt::AlignCenter,
-            size(),
-            qApp->desktop()->availableGeometry()
-        )
-    );
+    setupCentralWidget();
+    setupCallbacks();
 }
 
 QtMainWindow::~QtMainWindow()
 {
-    // Qt will handle cleanup of child widgets
+    // Clean up dialog instances
+    if (resourcePackGUI_) delete resourcePackGUI_;
+    if (equalizer_) delete equalizer_;
+    if (keybindEditor_) delete keybindEditor_;
+    if (audioSettings_) delete audioSettings_;
+    if (midiEditor_) delete midiEditor_;
+    if (lyricEditor_) delete lyricEditor_;
+    if (settings_) delete settings_;
+    if (helpSystem_) delete helpSystem_;
 }
 
 void QtMainWindow::setApplication(Lyricstator::Application* app)
 {
     application_ = app;
+    
+    // Set application for all components
     if (karaokeDisplay_) {
         karaokeDisplay_->setApplication(app);
     }
-}
-
-void QtMainWindow::loadFile(const QString& filepath)
-{
-    if (filepath.isEmpty()) return;
-    
-    QString extension = filepath.mid(filepath.lastIndexOf('.')).toLower();
-    
-    if (extension == ".mid" || extension == ".midi") {
-        loadMidiFile(filepath);
-    } else if (extension == ".wav" || extension == ".mp3" || extension == ".ogg") {
-        loadAudioFile(filepath);
-    } else if (extension == ".lystr") {
-        loadLyricScript(filepath);
-    } else {
-        QMessageBox::warning(this, "Unsupported File", 
-                           "File type not supported: " + extension);
+    if (songBrowser_) {
+        songBrowser_->setApplication(app);
     }
-}
-
-void QtMainWindow::loadMidiFile(const QString& filepath)
-{
-    if (!application_) return;
-    
-    try {
-        application_->LoadMidiFile(filepath.toStdString());
-        statusBar()->showMessage("Loaded MIDI file: " + filepath, 3000);
-    } catch (const std::exception& e) {
-        QMessageBox::critical(this, "Error", 
-                           "Failed to load MIDI file: " + QString(e.what()));
+    if (resourcePackGUI_) {
+        resourcePackGUI_->setApplication(app);
     }
-}
-
-void QtMainWindow::loadAudioFile(const QString& filepath)
-{
-    if (!application_) return;
-    
-    try {
-        application_->LoadAudioFile(filepath.toStdString());
-        statusBar()->showMessage("Loaded audio file: " + filepath, 3000);
-    } catch (const std::exception& e) {
-        QMessageBox::critical(this, "Error", 
-                           "Failed to load audio file: " + QString(e.what()));
+    if (equalizer_) {
+        equalizer_->setApplication(app);
     }
-}
-
-void QtMainWindow::loadLyricScript(const QString& filepath)
-{
-    if (!application_) return;
-    
-    try {
-        application_->LoadLyricScript(filepath.toStdString());
-        statusBar()->showMessage("Loaded lyric script: " + filepath, 3000);
-    } catch (const std::exception& e) {
-        QMessageBox::critical(this, "Error", 
-                           "Failed to load lyric script: " + QString(e.what()));
+    if (keybindEditor_) {
+        keybindEditor_->setApplication(app);
     }
-}
-
-void QtMainWindow::dragEnterEvent(QDragEnterEvent* event)
-{
-    if (event->mimeData()->hasUrls()) {
-        event->acceptProposedAction();
+    if (audioSettings_) {
+        audioSettings_->setApplication(app);
     }
-}
-
-void QtMainWindow::dropEvent(QDropEvent* event)
-{
-    const QMimeData* mimeData = event->mimeData();
-    if (mimeData->hasUrls()) {
-        processDroppedFiles(mimeData->urls());
-        event->acceptProposedAction();
+    if (midiEditor_) {
+        midiEditor_->setApplication(app);
     }
-}
-
-void QtMainWindow::closeEvent(QCloseEvent* event)
-{
-    if (application_) {
-        application_->Shutdown();
+    if (lyricEditor_) {
+        lyricEditor_->setApplication(app);
     }
-    event->accept();
+    if (settings_) {
+        settings_->setApplication(app);
+    }
+    if (helpSystem_) {
+        helpSystem_->setApplication(app);
+    }
 }
 
 void QtMainWindow::setupUI()
 {
-    setupCentralWidget();
+    // Set window styling
+    setStyleSheet(R"(
+        QMainWindow {
+            background-color: rgb(30, 35, 45);
+            color: white;
+        }
+        QMenuBar {
+            background-color: rgb(40, 45, 55);
+            color: white;
+            border-bottom: 1px solid rgb(60, 70, 90);
+        }
+        QMenuBar::item {
+            background-color: transparent;
+            padding: 8px 12px;
+        }
+        QMenuBar::item:selected {
+            background-color: rgb(60, 70, 90);
+        }
+        QMenu {
+            background-color: rgb(40, 45, 55);
+            color: white;
+            border: 1px solid rgb(60, 70, 90);
+        }
+        QMenu::item:selected {
+            background-color: rgb(60, 70, 90);
+        }
+        QToolBar {
+            background-color: rgb(35, 40, 50);
+            border: none;
+            spacing: 5px;
+            padding: 5px;
+        }
+        QStatusBar {
+            background-color: rgb(35, 40, 50);
+            color: white;
+            border-top: 1px solid rgb(60, 70, 90);
+        }
+    )");
+}
+
+void QtMainWindow::setupMenuBar()
+{
+    QMenuBar* menuBar = this->menuBar();
+    
+    // File menu
+    QMenu* fileMenu = menuBar->addMenu("&File");
+    
+    openMidiAction_ = new QAction("Open &MIDI File...", this);
+    openMidiAction_->setShortcut(QKeySequence("Ctrl+M"));
+    openMidiAction_->setStatusTip("Open a MIDI file for karaoke");
+    fileMenu->addAction(openMidiAction_);
+    
+    openAudioAction_ = new QAction("Open &Audio File...", this);
+    openAudioAction_->setShortcut(QKeySequence("Ctrl+A"));
+    openAudioAction_->setStatusTip("Open an audio file for karaoke");
+    fileMenu->addAction(openAudioAction_);
+    
+    openLyricsAction_ = new QAction("Open &Lyrics File...", this);
+    openLyricsAction_->setShortcut(QKeySequence("Ctrl+L"));
+    openLyricsAction_->setStatusTip("Open a lyrics file");
+    fileMenu->addAction(openLyricsAction_);
+    
+    fileMenu->addSeparator();
+    
+    exitAction_ = new QAction("E&xit", this);
+    exitAction_->setShortcut(QKeySequence("Ctrl+Q"));
+    exitAction_->setStatusTip("Exit the application");
+    fileMenu->addAction(exitAction_);
+    
+    // Tools menu
+    QMenu* toolsMenu = menuBar->addMenu("&Tools");
+    
+    resourcePackAction_ = new QAction("&Resource Pack Manager", this);
+    resourcePackAction_->setShortcut(QKeySequence("F1"));
+    resourcePackAction_->setStatusTip("Manage resource packs and themes");
+    toolsMenu->addAction(resourcePackAction_);
+    
+    equalizerAction_ = new QAction("&Equalizer", this);
+    equalizerAction_->setShortcut(QKeySequence("F2"));
+    equalizerAction_->setStatusTip("Configure audio equalizer");
+    toolsMenu->addAction(equalizerAction_);
+    
+    keybindEditorAction_ = new QAction("&Keyboard Shortcuts", this);
+    keybindEditorAction_->setShortcut(QKeySequence("F3"));
+    keybindEditorAction_->setStatusTip("Configure keyboard shortcuts");
+    toolsMenu->addAction(keybindEditorAction_);
+    
+    audioSettingsAction_ = new QAction("&Audio Settings", this);
+    audioSettingsAction_->setShortcut(QKeySequence("F4"));
+    audioSettingsAction_->setStatusTip("Configure audio settings");
+    toolsMenu->addAction(audioSettingsAction_);
+    
+    midiEditorAction_ = new QAction("&MIDI Editor", this);
+    midiEditorAction_->setShortcut(QKeySequence("F5"));
+    midiEditorAction_->setStatusTip("Edit MIDI files");
+    toolsMenu->addAction(midiEditorAction_);
+    
+    lyricEditorAction_ = new QAction("&Lyric Editor", this);
+    lyricEditorAction_->setShortcut(QKeySequence("F6"));
+    lyricEditorAction_->setStatusTip("Edit lyrics and timing");
+    toolsMenu->addAction(lyricEditorAction_);
+    
+    // Settings menu
+    QMenu* settingsMenu = menuBar->addMenu("&Settings");
+    
+    settingsAction_ = new QAction("&Preferences", this);
+    settingsAction_->setShortcut(QKeySequence("Ctrl+,"));
+    settingsAction_->setStatusTip("Configure application preferences");
+    settingsMenu->addAction(settingsAction_);
+    
+    // Help menu
+    QMenu* helpMenu = menuBar->addMenu("&Help");
+    
+    helpAction_ = new QAction("&User Manual", this);
+    helpAction_->setShortcut(QKeySequence("F1"));
+    helpAction_->setStatusTip("Show user manual and help");
+    helpMenu->addAction(helpAction_);
+    
+    aboutAction_ = new QAction("&About", this);
+    aboutAction_->setStatusTip("About Lyricstator");
+    helpMenu->addAction(aboutAction_);
+}
+
+void QtMainWindow::setupToolBar()
+{
+    QToolBar* toolBar = addToolBar("Main Toolbar");
+    toolBar->setMovable(false);
+    
+    toolBar->addAction(openMidiAction_);
+    toolBar->addAction(openAudioAction_);
+    toolBar->addAction(openLyricsAction_);
+    toolBar->addSeparator();
+    toolBar->addAction(resourcePackAction_);
+    toolBar->addAction(equalizerAction_);
+    toolBar->addAction(keybindEditorAction_);
+    toolBar->addSeparator();
+    toolBar->addAction(settingsAction_);
+    toolBar->addAction(helpAction_);
+}
+
+void QtMainWindow::setupStatusBar()
+{
+    QStatusBar* statusBar = this->statusBar();
+    statusBar->showMessage("Ready - Drag and drop files to load them");
 }
 
 void QtMainWindow::setupCentralWidget()
@@ -157,213 +270,271 @@ void QtMainWindow::setupCentralWidget()
     setCentralWidget(centralWidget);
     
     QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
+    mainLayout->setSpacing(10);
+    mainLayout->setContentsMargins(10, 10, 10, 10);
     
-    // Create main karaoke display
+    // Create main components
     karaokeDisplay_ = new QtKaraokeDisplay(this);
     mainLayout->addWidget(karaokeDisplay_);
     
-    // Create song browser
     songBrowser_ = new QtSongBrowser(this);
     mainLayout->addWidget(songBrowser_);
     
-    // Set layout properties
-    mainLayout->setSpacing(10);
-    mainLayout->setContentsMargins(10, 10, 10, 10);
+    // Set application for components
+    if (application_) {
+        karaokeDisplay_->setApplication(application_);
+        songBrowser_->setApplication(application_);
+    }
 }
 
-void QtMainWindow::createActions()
+void QtMainWindow::setupCallbacks()
 {
-    // File actions
-    openFileAction_ = new QAction(QIcon::fromTheme("document-open"), "Open File...", this);
-    openFileAction_->setShortcut(QKeySequence::Open);
-    openFileAction_->setStatusTip("Open a file");
-    
-    openMidiAction_ = new QAction(QIcon::fromTheme("audio-x-midi"), "Open MIDI...", this);
-    openMidiAction_->setShortcut(QKeySequence("Ctrl+M"));
-    openMidiAction_->setStatusTip("Open a MIDI file");
-    
-    openAudioAction_ = new QAction(QIcon::fromTheme("audio-x-generic"), "Open Audio...", this);
-    openAudioAction_->setShortcut(QKeySequence("Ctrl+A"));
-    openAudioAction_->setStatusTip("Open an audio file");
-    
-    openLyricAction_ = new QAction(QIcon::fromTheme("text-x-generic"), "Open Lyrics...", this);
-    openLyricAction_->setShortcut(QKeySequence("Ctrl+L"));
-    openLyricAction_->setStatusTip("Open a lyric script file");
-    
-    quitAction_ = new QAction(QIcon::fromTheme("application-exit"), "Quit", this);
-    quitAction_->setShortcut(QKeySequence::Quit);
-    quitAction_->setStatusTip("Quit the application");
-    
-    // Tools actions
-    resourcePackAction_ = new QAction(QIcon::fromTheme("applications-graphics"), "Resource Pack", this);
-    resourcePackAction_->setShortcut(QKeySequence("F1"));
-    resourcePackAction_->setStatusTip("Open resource pack manager");
-    
-    equalizerAction_ = new QAction(QIcon::fromTheme("audio-input-microphone"), "Equalizer", this);
-    equalizerAction_->setShortcut(QKeySequence("F2"));
-    equalizerAction_->setStatusTip("Open audio equalizer");
-    
-    keybindAction_ = new QAction(QIcon::fromTheme("preferences-desktop-keyboard"), "Keybinds", this);
-    keybindAction_->setShortcut(QKeySequence("F3"));
-    keybindAction_->setStatusTip("Configure keybindings");
+    // Connect menu actions
+    connect(openMidiAction_, &QAction::triggered, this, &QtMainWindow::onOpenMidiFile);
+    connect(openAudioAction_, &QAction::triggered, this, &QtMainWindow::onOpenAudioFile);
+    connect(openLyricsAction_, &QAction::triggered, this, &QtMainWindow::onOpenLyricsFile);
+    connect(resourcePackAction_, &QAction::triggered, this, &QtMainWindow::onShowResourcePackGUI);
+    connect(equalizerAction_, &QAction::triggered, this, &QtMainWindow::onShowEqualizer);
+    connect(keybindEditorAction_, &QAction::triggered, this, &QtMainWindow::onShowKeybindEditor);
+    connect(audioSettingsAction_, &QAction::triggered, this, &QtMainWindow::onShowAudioSettings);
+    connect(midiEditorAction_, &QAction::triggered, this, &QtMainWindow::onShowMidiEditor);
+    connect(lyricEditorAction_, &QAction::triggered, this, &QtMainWindow::onShowLyricEditor);
+    connect(settingsAction_, &QAction::triggered, this, &QtMainWindow::onShowSettings);
+    connect(helpAction_, &QAction::triggered, this, &QtMainWindow::onShowHelp);
+    connect(aboutAction_, &QAction::triggered, this, &QtMainWindow::onAbout);
+    connect(exitAction_, &QAction::triggered, this, &QtMainWindow::onExit);
 }
 
-void QtMainWindow::setupMenuBar()
+void QtMainWindow::dragEnterEvent(QDragEnterEvent* event)
 {
-    // File menu
-    fileMenu_ = menuBar()->addMenu("&File");
-    fileMenu_->addAction(openFileAction_);
-    fileMenu_->addSeparator();
-    fileMenu_->addAction(openMidiAction_);
-    fileMenu_->addAction(openAudioAction_);
-    fileMenu_->addAction(openLyricAction_);
-    fileMenu_->addSeparator();
-    fileMenu_->addAction(quitAction_);
-    
-    // Tools menu
-    toolsMenu_ = menuBar()->addMenu("&Tools");
-    toolsMenu_->addAction(resourcePackAction_);
-    toolsMenu_->addAction(equalizerAction_);
-    toolsMenu_->addAction(keybindAction_);
-    
-    // Help menu
-    helpMenu_ = menuBar()->addMenu("&Help");
-    helpMenu_->addAction("&About", this, &QtMainWindow::showAbout);
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+        statusBar()->showMessage("Drop files to load them");
+    }
 }
 
-void QtMainWindow::setupToolBar()
+void QtMainWindow::dropEvent(QDropEvent* event)
 {
-    mainToolBar_ = addToolBar("Main Toolbar");
-    mainToolBar_->setMovable(false);
+    const QMimeData* mimeData = event->mimeData();
     
-    mainToolBar_->addAction(openFileAction_);
-    mainToolBar_->addSeparator();
-    mainToolBar_->addAction(openMidiAction_);
-    mainToolBar_->addAction(openAudioAction_);
-    mainToolBar_->addAction(openLyricAction_);
-    mainToolBar_->addSeparator();
-    mainToolBar_->addAction(resourcePackAction_);
-    mainToolBar_->addAction(equalizerAction_);
-    mainToolBar_->addAction(keybindAction_);
-}
-
-void QtMainWindow::setupStatusBar()
-{
-    statusBar_ = statusBar();
-    statusBar_->showMessage("Ready");
-}
-
-void QtMainWindow::connectSignals()
-{
-    // File actions
-    connect(openFileAction_, &QAction::triggered, this, &QtMainWindow::openFile);
-    connect(openMidiAction_, &QAction::triggered, this, &QtMainWindow::openMidiFile);
-    connect(openAudioAction_, &QAction::triggered, this, &QtMainWindow::openAudioFile);
-    connect(openLyricAction_, &QAction::triggered, this, &QtMainWindow::openLyricScript);
-    connect(quitAction_, &QAction::triggered, this, &QtMainWindow::quitApplication);
-    
-    // Tools actions
-    connect(resourcePackAction_, &QAction::triggered, this, &QtMainWindow::showResourcePackGUI);
-    connect(equalizerAction_, &QAction::triggered, this, &QtMainWindow::showEqualizer);
-    connect(keybindAction_, &QAction::triggered, this, &QtMainWindow::showKeybindEditor);
-}
-
-void QtMainWindow::processDroppedFiles(const QList<QUrl>& urls)
-{
-    for (const QUrl& url : urls) {
-        if (url.isLocalFile()) {
-            loadFile(url.toLocalFile());
+    if (mimeData->hasUrls()) {
+        QList<QUrl> urls = mimeData->urls();
+        
+        for (const QUrl& url : urls) {
+            if (url.isLocalFile()) {
+                QString filePath = url.toLocalFile();
+                handleFileDrop(filePath);
+            }
         }
+        
+        event->acceptProposedAction();
+        statusBar()->showMessage("Files loaded successfully");
     }
 }
 
-void QtMainWindow::openFile()
+void QtMainWindow::closeEvent(QCloseEvent* event)
 {
-    QString filepath = QFileDialog::getOpenFileName(this, "Open File", "",
-        "All Files (*);;MIDI Files (*.mid *.midi);;Audio Files (*.wav *.mp3 *.ogg);;Lyric Scripts (*.lystr)");
-    
-    if (!filepath.isEmpty()) {
-        loadFile(filepath);
+    // Save any unsaved changes
+    if (application_) {
+        // TODO: Check for unsaved changes
+        // if (hasUnsavedChanges()) {
+        //     QMessageBox::StandardButton reply = QMessageBox::question(this, "Save Changes", 
+        //         "Do you want to save your changes before exiting?",
+        //         QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        //     
+        //     if (reply == QMessageBox::Cancel) {
+        //         event->ignore();
+        //         return;
+        //     } else if (reply == QMessageBox::Yes) {
+        //         // Save changes
+        //     }
+        // }
     }
+    
+    event->accept();
 }
 
-void QtMainWindow::openMidiFile()
+void QtMainWindow::loadFile(const QString& filePath)
 {
-    QString filepath = QFileDialog::getOpenFileName(this, "Open MIDI File", "",
-        "MIDI Files (*.mid *.midi);;All Files (*)");
+    if (!application_) {
+        QMessageBox::warning(this, "Error", "Application not initialized");
+        return;
+    }
     
-    if (!filepath.isEmpty()) {
-        loadMidiFile(filepath);
+    QFileInfo fileInfo(filePath);
+    QString extension = fileInfo.suffix().toLower();
+    
+    if (extension == "mid" || extension == "midi") {
+        // Load MIDI file
+        if (application_->LoadMidiFile(filePath.toStdString())) {
+            statusBar()->showMessage(QString("Loaded MIDI file: %1").arg(fileInfo.fileName()));
+        } else {
+            QMessageBox::warning(this, "Error", "Failed to load MIDI file");
+        }
+    } else if (extension == "mp3" || extension == "wav" || extension == "ogg" || 
+               extension == "flac" || extension == "m4a" || extension == "aac") {
+        // Load audio file
+        if (application_->LoadAudioFile(filePath.toStdString())) {
+            statusBar()->showMessage(QString("Loaded audio file: %1").arg(fileInfo.fileName()));
+        } else {
+            QMessageBox::warning(this, "Error", "Failed to load audio file");
+        }
+    } else if (extension == "lystr" || extension == "lrc" || extension == "txt") {
+        // Load lyrics file
+        if (application_->LoadLyricScript(filePath.toStdString())) {
+            statusBar()->showMessage(QString("Loaded lyrics file: %1").arg(fileInfo.fileName()));
+        } else {
+            QMessageBox::warning(this, "Error", "Failed to load lyrics file");
+        }
+    } else {
+        QMessageBox::warning(this, "Unsupported File", 
+                           QString("Unsupported file type: %1").arg(extension));
     }
 }
 
-void QtMainWindow::openAudioFile()
+void QtMainWindow::handleFileDrop(const QString& filePath)
 {
-    QString filepath = QFileDialog::getOpenFileName(this, "Open Audio File", "",
-        "Audio Files (*.wav *.mp3 *.ogg);;All Files (*)");
-    
-    if (!filepath.isEmpty()) {
-        loadAudioFile(filepath);
-    }
+    loadFile(filePath);
 }
 
-void QtMainWindow::openLyricScript()
+// Slot implementations
+void QtMainWindow::onOpenMidiFile()
 {
-    QString filepath = QFileDialog::getOpenFileName(this, "Open Lyric Script", "",
-        "Lyric Scripts (*.lystr);;All Files (*)");
-    
-    if (!filepath.isEmpty()) {
-        loadLyricScript(filepath);
+    QString filePath = QFileDialog::getOpenFileName(this, "Open MIDI File", 
+                                                   "", "MIDI Files (*.mid *.midi)");
+    if (!filePath.isEmpty()) {
+        loadFile(filePath);
     }
 }
 
-void QtMainWindow::showResourcePackGUI()
+void QtMainWindow::onOpenAudioFile()
+{
+    QString filePath = QFileDialog::getOpenFileName(this, "Open Audio File", 
+                                                   "", "Audio Files (*.mp3 *.wav *.ogg *.flac *.m4a *.aac)");
+    if (!filePath.isEmpty()) {
+        loadFile(filePath);
+    }
+}
+
+void QtMainWindow::onOpenLyricsFile()
+{
+    QString filePath = QFileDialog::getOpenFileName(this, "Open Lyrics File", 
+                                                   "", "Lyrics Files (*.lystr *.lrc *.txt)");
+    if (!filePath.isEmpty()) {
+        loadFile(filePath);
+    }
+}
+
+void QtMainWindow::onShowResourcePackGUI()
 {
     if (!resourcePackGUI_) {
         resourcePackGUI_ = new QtResourcePackGUI(this);
-        resourcePackGUI_->setApplication(application_);
+        if (application_) {
+            resourcePackGUI_->setApplication(application_);
+        }
     }
-    
     resourcePackGUI_->show();
-    resourcePackGUI_->raise();
-    resourcePackGUI_->activateWindow();
 }
 
-void QtMainWindow::showEqualizer()
+void QtMainWindow::onShowEqualizer()
 {
     if (!equalizer_) {
         equalizer_ = new QtEqualizer(this);
-        equalizer_->setApplication(application_);
+        if (application_) {
+            equalizer_->setApplication(application_);
+        }
     }
-    
     equalizer_->show();
-    equalizer_->raise();
-    equalizer_->activateWindow();
 }
 
-void QtMainWindow::showKeybindEditor()
+void QtMainWindow::onShowKeybindEditor()
 {
     if (!keybindEditor_) {
         keybindEditor_ = new QtKeybindEditor(this);
-        keybindEditor_->setApplication(application_);
+        if (application_) {
+            keybindEditor_->setApplication(application_);
+        }
     }
-    
     keybindEditor_->show();
-    keybindEditor_->raise();
-    keybindEditor_->activateWindow();
 }
 
-void QtMainWindow::showAbout()
+void QtMainWindow::onShowAudioSettings()
 {
-    QMessageBox::about(this, "About Lyricstator",
-        "<h3>Lyricstator v1.0.0</h3>"
-        "<p>Karaoke and Lyric Visualization System</p>"
-        "<p>A modern application for creating and displaying synchronized lyrics "
-        "with audio and MIDI support.</p>"
-        "<p>Built with Qt6 and modern C++</p>");
+    if (!audioSettings_) {
+        audioSettings_ = new QtAudioSettings(this);
+        if (application_) {
+            audioSettings_->setApplication(application_);
+        }
+    }
+    audioSettings_->show();
 }
 
-void QtMainWindow::quitApplication()
+void QtMainWindow::onShowMidiEditor()
+{
+    if (!midiEditor_) {
+        midiEditor_ = new QtMidiEditor(this);
+        if (application_) {
+            midiEditor_->setApplication(application_);
+        }
+    }
+    midiEditor_->show();
+}
+
+void QtMainWindow::onShowLyricEditor()
+{
+    if (!lyricEditor_) {
+        lyricEditor_ = new QtLyricEditor(this);
+        if (application_) {
+            lyricEditor_->setApplication(application_);
+        }
+    }
+    lyricEditor_->show();
+}
+
+void QtMainWindow::onShowSettings()
+{
+    if (!settings_) {
+        settings_ = new QtSettings(this);
+        if (application_) {
+            settings_->setApplication(application_);
+        }
+    }
+    settings_->show();
+}
+
+void QtMainWindow::onShowHelp()
+{
+    if (!helpSystem_) {
+        helpSystem_ = new QtHelpSystem(this);
+        if (application_) {
+            helpSystem_->setApplication(application_);
+        }
+    }
+    helpSystem_->show();
+}
+
+void QtMainWindow::onAbout()
+{
+    QMessageBox::about(this, "About Lyricstator", 
+                       "<h2>Lyricstator</h2>"
+                       "<p><b>Version:</b> 1.0.0</p>"
+                       "<p><b>Description:</b> Advanced karaoke application with Qt6 interface</p>"
+                       "<p><b>Features:</b></p>"
+                       "<ul>"
+                       "<li>MIDI and audio file support</li>"
+                       "<li>Real-time pitch detection</li>"
+                       "<li>Resource pack theming</li>"
+                       "<li>Advanced audio equalizer</li>"
+                       "<li>Customizable keyboard shortcuts</li>"
+                       "<li>Professional audio settings</li>"
+                       "<li>MIDI and lyric editing</li>"
+                       "<li>Comprehensive preferences</li>"
+                       "<li>Built-in help system</li>"
+                       "</ul>"
+                       "<p><b>Built with:</b> Qt6, SDL2, C++17</p>");
+}
+
+void QtMainWindow::onExit()
 {
     QApplication::quit();
 }

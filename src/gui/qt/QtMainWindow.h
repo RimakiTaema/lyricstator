@@ -5,12 +5,9 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QMenuBar>
-#include <QStatusBar>
-#include <QToolBar>
 #include <QAction>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QApplication>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
@@ -19,11 +16,16 @@
 #include <QString>
 
 #include "core/Application.h"
-#include "QtKaraokeDisplay.h"
-#include "QtResourcePackGUI.h"
-#include "QtSongBrowser.h"
-#include "QtEqualizer.h"
-#include "QtKeybindEditor.h"
+#include "gui/qt/QtKaraokeDisplay.h"
+#include "gui/qt/QtResourcePackGUI.h"
+#include "gui/qt/QtSongBrowser.h"
+#include "gui/qt/QtEqualizer.h"
+#include "gui/qt/QtKeybindEditor.h"
+#include "gui/qt/QtAudioSettings.h"
+#include "gui/qt/QtMidiEditor.h"
+#include "gui/qt/QtLyricEditor.h"
+#include "gui/qt/QtSettings.h"
+#include "gui/qt/QtHelpSystem.h"
 
 class QtMainWindow : public QMainWindow
 {
@@ -34,10 +36,6 @@ public:
     ~QtMainWindow();
 
     void setApplication(Lyricstator::Application* app);
-    void loadFile(const QString& filepath);
-    void loadMidiFile(const QString& filepath);
-    void loadAudioFile(const QString& filepath);
-    void loadLyricScript(const QString& filepath);
 
 protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
@@ -45,15 +43,19 @@ protected:
     void closeEvent(QCloseEvent* event) override;
 
 private slots:
-    void openFile();
-    void openMidiFile();
-    void openAudioFile();
-    void openLyricScript();
-    void showResourcePackGUI();
-    void showEqualizer();
-    void showKeybindEditor();
-    void showAbout();
-    void quitApplication();
+    void onOpenMidiFile();
+    void onOpenAudioFile();
+    void onOpenLyricsFile();
+    void onShowResourcePackGUI();
+    void onShowEqualizer();
+    void onShowKeybindEditor();
+    void onShowAudioSettings();
+    void onShowMidiEditor();
+    void onShowLyricEditor();
+    void onShowSettings();
+    void onShowHelp();
+    void onAbout();
+    void onExit();
 
 private:
     void setupUI();
@@ -61,39 +63,40 @@ private:
     void setupToolBar();
     void setupStatusBar();
     void setupCentralWidget();
-    void createActions();
-    void connectSignals();
-    void processDroppedFiles(const QList<QUrl>& urls);
+    void setupCallbacks();
+    void loadFile(const QString& filePath);
+    void handleFileDrop(const QString& filePath);
 
     Lyricstator::Application* application_;
     
-    // UI Components
+    // Main UI components
     QtKaraokeDisplay* karaokeDisplay_;
-    QtResourcePackGUI* resourcePackGUI_;
     QtSongBrowser* songBrowser_;
-    QtEqualizer* equalizer_;
-    QtKeybindEditor* keybindEditor_;
     
-    // Actions
-    QAction* openFileAction_;
+    // Menu actions
     QAction* openMidiAction_;
     QAction* openAudioAction_;
-    QAction* openLyricAction_;
+    QAction* openLyricsAction_;
     QAction* resourcePackAction_;
     QAction* equalizerAction_;
-    QAction* keybindAction_;
-    QAction* quitAction_;
+    QAction* keybindEditorAction_;
+    QAction* audioSettingsAction_;
+    QAction* midiEditorAction_;
+    QAction* lyricEditorAction_;
+    QAction* settingsAction_;
+    QAction* helpAction_;
+    QAction* aboutAction_;
+    QAction* exitAction_;
     
-    // Menus
-    QMenu* fileMenu_;
-    QMenu* toolsMenu_;
-    QMenu* helpMenu_;
-    
-    // Toolbar
-    QToolBar* mainToolBar_;
-    
-    // Status bar
-    QStatusBar* statusBar_;
+    // Dialog instances
+    QtResourcePackGUI* resourcePackGUI_;
+    QtEqualizer* equalizer_;
+    QtKeybindEditor* keybindEditor_;
+    QtAudioSettings* audioSettings_;
+    QtMidiEditor* midiEditor_;
+    QtLyricEditor* lyricEditor_;
+    QtSettings* settings_;
+    QtHelpSystem* helpSystem_;
 };
 
 #endif // QTMAINWINDOW_H
