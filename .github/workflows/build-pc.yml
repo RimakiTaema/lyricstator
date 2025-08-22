@@ -12,15 +12,20 @@ on:
         - Debug
         - Release
       platform:
-        description: 'Target platform'
+        description: 'Target platform (macOS builds may be unreliable)'
         required: true
-        default: 'all'
+        default: 'linux-windows'
         type: choice
         options:
-        - all
-        - linux
-        - windows
-        - macos
+        - linux-windows
+        - linux-only
+        - windows-only
+        - all-platforms
+      include_macos:
+        description: 'Include macOS build (may be unreliable)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   # -------------------------------
@@ -53,11 +58,11 @@ jobs:
           key: qt6-${{ runner.os }}-${{ hashFiles('**/CMakeLists_Qt6.txt') }}
 
   # -------------------------------
-  # 2️⃣ Build Linux (x86_64)
+  # 2️⃣ Build Linux (x86_64) - Always reliable
   # -------------------------------
   build-linux-x64:
     needs: setup-qt6
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'linux' }}
+    if: ${{ github.event.inputs.platform == 'linux-windows' || github.event.inputs.platform == 'linux-only' || github.event.inputs.platform == 'all-platforms' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -103,11 +108,11 @@ jobs:
           if-no-files-found: warn
 
   # -------------------------------
-  # 3️⃣ Build Windows (x64)
+  # 3️⃣ Build Windows (x64) - Reliable
   # -------------------------------
   build-windows-x64:
     needs: setup-qt6
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows' }}
+    if: ${{ github.event.inputs.platform == 'linux-windows' || github.event.inputs.platform == 'windows-only' || github.event.inputs.platform == 'all-platforms' }}
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -156,11 +161,11 @@ jobs:
           if-no-files-found: warn
 
   # -------------------------------
-  # 4️⃣ Build macOS (x64)
+  # 4️⃣ Build macOS (x64) - Optional, may be unreliable
   # -------------------------------
   build-macos-x64:
     needs: setup-qt6
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'macos' }}
+    if: ${{ (github.event.inputs.platform == 'all-platforms' || github.event.inputs.include_macos == 'true') }}
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -217,6 +222,7 @@ jobs:
           echo "=== Lyricstator Qt6 Build Summary ==="
           echo "Build Type: ${{ github.event.inputs.build_type }}"
           echo "Target Platform: ${{ github.event.inputs.platform }}"
+          echo "Include macOS: ${{ github.event.inputs.include_macos }}"
           echo ""
           echo "Build Status:"
           echo "- Linux x64: ${{ needs.build-linux-x64.result }}"
@@ -224,9 +230,20 @@ jobs:
           echo "- macOS x64: ${{ needs.build-macos-x64.result }}"
           echo ""
           echo "Artifacts created:"
-          echo "- Linux: lyricstator-linux-x64-${{ github.event.inputs.build_type }}"
-          echo "- Windows: lyricstator-windows-x64-${{ github.event.inputs.build_type }}"
-          echo "- macOS: lyricstator-macos-x64-${{ github.event.inputs.build_type }}"
+          if [ "${{ needs.build-linux-x64.result }}" != "skipped" ]; then
+            echo "- Linux: lyricstator-linux-x64-${{ github.event.inputs.build_type }}"
+          fi
+          if [ "${{ needs.build-windows-x64.result }}" != "skipped" ]; then
+            echo "- Windows: lyricstator-windows-x64-${{ github.event.inputs.build_type }}"
+          fi
+          if [ "${{ needs.build-macos-x64.result }}" != "skipped" ]; then
+            echo "- macOS: lyricstator-macos-x64-${{ github.event.inputs.build_type }}"
+          fi
+          echo ""
+          echo "Platform Notes:"
+          echo "- Linux: Most reliable, recommended for testing"
+          echo "- Windows: Reliable, good for distribution"
+          echo "- macOS: Optional, may have issues in CI"
           echo ""
           echo "Each artifact contains:"
           echo "- Application binary"
