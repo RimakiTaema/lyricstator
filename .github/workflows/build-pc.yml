@@ -44,7 +44,7 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          arch: 'x64'
+          arch: 'x86_64'
           modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
 
@@ -63,7 +63,7 @@ jobs:
   # -------------------------------
   # 2️⃣ Build Linux (x86_64) - Automatic + Manual
   # -------------------------------
-  build-linux-x64:
+  build-linux-x86_64:
     needs: setup-qt6
     runs-on: ubuntu-latest
     steps:
@@ -73,7 +73,7 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          arch: 'x64'
+          arch: 'x86_64'
           modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
 
@@ -84,7 +84,7 @@ jobs:
 
       - name: Build Lyricstator Qt6
         run: |
-          mkdir -p build_qt_linux && cd build_qt_linux
+          mkdir -p build_qt_linux_x86_64 && cd build_qt_linux_x86_64
           # Use Release for automatic builds, input value for manual builds
           BUILD_TYPE=${GITHUB_EVENT_NAME == 'workflow_dispatch' && github.event.inputs.build_type || 'Release'}
           cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -f ../CMakeLists_Qt6.txt ..
@@ -92,28 +92,78 @@ jobs:
 
       - name: Create Installer Project
         run: |
-          cd build_qt_linux
+          cd build_qt_linux_x86_64
           make installer
 
       - name: Build Installer
         run: |
-          cd build_qt_linux/installer
+          cd build_qt_linux_x86_64/installer
           chmod +x build_installer.sh
           ./build_installer.sh
 
-      - name: Upload Linux Artifacts
+      - name: Upload Linux x86_64 Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lyricstator-linux-x64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}
+          name: lyricstator-linux-x86_64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}
           path: |
-            build_qt_linux/Lyricstator_Qt6
-            build_qt_linux/installer/
+            build_qt_linux_x86_64/Lyricstator_Qt6
+            build_qt_linux_x86_64/installer/
           if-no-files-found: warn
 
   # -------------------------------
-  # 3️⃣ Build Windows (x64) - Automatic + Manual
+  # 3️⃣ Build Linux (ARM64) - Automatic + Manual
   # -------------------------------
-  build-windows-x64:
+  build-linux-arm64:
+    needs: setup-qt6
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Qt6
+        uses: jurplel/install-qt-action@v4
+        with:
+          arch: 'arm64'
+          modules: 'qtcharts qtmultimedia qtmultimediawidgets'
+          install-deps: true
+
+      - name: Setup Qt Installer Framework
+        run: |
+          sudo apt update
+          sudo apt install -y qt6-tools-dev qt6-tools-dev-tools qbs cmake build-essential
+
+      - name: Build Lyricstator Qt6
+        run: |
+          mkdir -p build_qt_linux_arm64 && cd build_qt_linux_arm64
+          # Use Release for automatic builds, input value for manual builds
+          BUILD_TYPE=${GITHUB_EVENT_NAME == 'workflow_dispatch' && github.event.inputs.build_type || 'Release'}
+          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -f ../CMakeLists_Qt6.txt ..
+          cmake --build . --config $BUILD_TYPE -j$(nproc)
+
+      - name: Create Installer Project
+        run: |
+          cd build_qt_linux_arm64
+          make installer
+
+      - name: Build Installer
+        run: |
+          cd build_qt_linux_arm64/installer
+          chmod +x build_installer.sh
+          ./build_installer.sh
+
+      - name: Upload Linux ARM64 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyricstator-linux-arm64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}
+          path: |
+            build_qt_linux_arm64/Lyricstator_Qt6
+            build_qt_linux_arm64/installer/
+          if-no-files-found: warn
+
+  # -------------------------------
+  # 4️⃣ Build Windows (x86_64) - Automatic + Manual
+  # -------------------------------
+  build-windows-x86_64:
     needs: setup-qt6
     runs-on: windows-latest
     steps:
@@ -123,7 +173,7 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          arch: 'x64'
+          arch: 'x86_64'
           modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
 
@@ -135,8 +185,8 @@ jobs:
       - name: Build Lyricstator Qt6
         shell: pwsh
         run: |
-          mkdir -p build_qt_windows
-          cd build_qt_windows
+          mkdir -p build_qt_windows_x86_64
+          cd build_qt_windows_x86_64
           # Use Release for automatic builds, input value for manual builds
           $BUILD_TYPE = if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') { '${{ github.event.inputs.build_type }}' } else { 'Release' }
           cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -f ../CMakeLists_Qt6.txt ..
@@ -145,28 +195,28 @@ jobs:
       - name: Create Installer Project
         shell: pwsh
         run: |
-          cd build_qt_windows
+          cd build_qt_windows_x86_64
           make installer
 
       - name: Build Installer
         shell: pwsh
         run: |
-          cd build_qt_windows/installer
+          cd build_qt_windows_x86_64/installer
           .\build_installer.sh
 
-      - name: Upload Windows Artifacts
+      - name: Upload Windows x86_64 Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lyricstator-windows-x64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}
+          name: lyricstator-windows-x86_64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}
           path: |
-            build_qt_windows/Lyricstator_Qt6.exe
-            build_qt_windows/installer/
+            build_qt_windows_x86_64/Lyricstator_Qt6.exe
+            build_qt_windows_x86_64/installer/
           if-no-files-found: warn
 
   # -------------------------------
-  # 4️⃣ Build macOS (x64) - Manual Only
+  # 5️⃣ Build macOS (x86_64) - Manual Only
   # -------------------------------
-  build-macos-x64:
+  build-macos-x86_64:
     needs: setup-qt6
     if: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'all-platforms' || github.event.inputs.include_macos == 'true') }}
     runs-on: macos-latest
@@ -177,7 +227,7 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          arch: 'x64'
+          arch: 'x86_64'
           modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
 
@@ -187,35 +237,35 @@ jobs:
 
       - name: Build Lyricstator Qt6
         run: |
-          mkdir -p build_qt_macos && cd build_qt_macos
+          mkdir -p build_qt_macos_x86_64 && cd build_qt_macos_x86_64
           cmake -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type }} -f ../CMakeLists_Qt6.txt ..
           cmake --build . --config ${{ github.event.inputs.build_type }} -j$(sysctl -n hw.ncpu)
 
       - name: Create Installer Project
         run: |
-          cd build_qt_macos
+          cd build_qt_macos_x86_64
           make installer
 
       - name: Build Installer
         run: |
-          cd build_qt_macos/installer
+          cd build_qt_macos_x86_64/installer
           chmod +x build_installer.sh
           ./build_installer.sh
 
-      - name: Upload macOS Artifacts
+      - name: Upload macOS x86_64 Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lyricstator-macos-x64-${{ github.event.inputs.build_type }}
+          name: lyricstator-macos-x86_64-${{ github.event.inputs.build_type }}
           path: |
-            build_qt_macos/Lyricstator_Qt6
-            build_qt_macos/installer/
+            build_qt_macos_x86_64/Lyricstator_Qt6
+            build_qt_macos_x86_64/installer/
           if-no-files-found: warn
 
   # -------------------------------
-  # 5️⃣ Build Summary
+  # 6️⃣ Build Summary
   # -------------------------------
   build-summary:
-    needs: [build-linux-x64, build-windows-x64, build-macos-x64]
+    needs: [build-linux-x86_64, build-linux-arm64, build-windows-x86_64, build-macos-x86_64]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -229,24 +279,28 @@ jobs:
             echo "Include macOS: ${{ github.event.inputs.include_macos }}"
           else
             echo "Build Type: Release (automatic)"
-            echo "Target Platform: Linux + Windows (automatic)"
+            echo "Target Platform: Linux x86_64 + ARM64 + Windows x86_64 (automatic)"
             echo "Include macOS: No (manual builds only)"
           fi
           echo ""
           echo "Build Status:"
-          echo "- Linux x64: ${{ needs.build-linux-x64.result }}"
-          echo "- Windows x64: ${{ needs.build-windows-x64.result }}"
-          echo "- macOS x64: ${{ needs.build-macos-x64.result }}"
+          echo "- Linux x86_64: ${{ needs.build-linux-x86_64.result }}"
+          echo "- Linux ARM64: ${{ needs.build-linux-arm64.result }}"
+          echo "- Windows x86_64: ${{ needs.build-windows-x86_64.result }}"
+          echo "- macOS x86_64: ${{ needs.build-macos-x86_64.result }}"
           echo ""
           echo "Artifacts created:"
-          if [ "${{ needs.build-linux-x64.result }}" != "skipped" ]; then
-            echo "- Linux: lyricstator-linux-x64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}"
+          if [ "${{ needs.build-linux-x86_64.result }}" != "skipped" ]; then
+            echo "- Linux x86_64: lyricstator-linux-x86_64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}"
           fi
-          if [ "${{ needs.build-windows-x64.result }}" != "skipped" ]; then
-            echo "- Windows: lyricstator-windows-x64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}"
+          if [ "${{ needs.build-linux-arm64.result }}" != "skipped" ]; then
+            echo "- Linux ARM64: lyricstator-linux-arm64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}"
           fi
-          if [ "${{ needs.build-macos-x64.result }}" != "skipped" ]; then
-            echo "- macOS: lyricstator-macos-x64-${{ github.event.inputs.build_type }}"
+          if [ "${{ needs.build-windows-x86_64.result }}" != "skipped" ]; then
+            echo "- Windows x86_64: lyricstator-windows-x86_64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}"
+          fi
+          if [ "${{ needs.build-macos-x86_64.result }}" != "skipped" ]; then
+            echo "- macOS x86_64: lyricstator-macos-x86_64-${{ github.event.inputs.build_type }}"
           fi
           echo ""
           echo "Build Mode:"
@@ -254,14 +308,15 @@ jobs:
             echo "- Manual build with custom options"
           else
             echo "- Automatic build (push/pull request)"
-            echo "- Always builds Linux + Windows"
+            echo "- Always builds Linux x86_64 + ARM64 + Windows x86_64"
             echo "- macOS builds require manual trigger"
           fi
           echo ""
           echo "Platform Notes:"
-          echo "- Linux: Most reliable, always built"
-          echo "- Windows: Reliable, always built"
-          echo "- macOS: Manual only, may have issues in CI"
+          echo "- Linux x86_64: Most reliable, always built"
+          echo "- Linux ARM64: ARM64 support, always built"
+          echo "- Windows x86_64: Reliable, always built"
+          echo "- macOS x86_64: Manual only, may have issues in CI"
           echo ""
           echo "Each artifact contains:"
           echo "- Application binary"
