@@ -1,10 +1,14 @@
 name: Build Lyricstator (PC)
 
 on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
   workflow_dispatch:
     inputs:
       build_type:
-        description: 'Build type'
+        description: 'Build type (manual builds only)'
         required: true
         default: 'Release'
         type: choice
@@ -12,7 +16,7 @@ on:
         - Debug
         - Release
       platform:
-        description: 'Target platform (macOS builds may be unreliable)'
+        description: 'Target platform (manual builds only)'
         required: true
         default: 'linux-windows'
         type: choice
@@ -22,7 +26,7 @@ on:
         - windows-only
         - all-platforms
       include_macos:
-        description: 'Include macOS build (may be unreliable)'
+        description: 'Include macOS build (manual builds only, may be unreliable)'
         required: false
         default: false
         type: boolean
@@ -58,11 +62,10 @@ jobs:
           key: qt6-${{ runner.os }}-${{ hashFiles('**/CMakeLists_Qt6.txt') }}
 
   # -------------------------------
-  # 2️⃣ Build Linux (x86_64) - Always reliable
+  # 2️⃣ Build Linux (x86_64) - Automatic + Manual
   # -------------------------------
   build-linux-x64:
     needs: setup-qt6
-    if: ${{ github.event.inputs.platform == 'linux-windows' || github.event.inputs.platform == 'linux-only' || github.event.inputs.platform == 'all-platforms' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -84,8 +87,10 @@ jobs:
       - name: Build Lyricstator Qt6
         run: |
           mkdir -p build_qt_linux && cd build_qt_linux
-          cmake -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type }} -f ../CMakeLists_Qt6.txt ..
-          cmake --build . --config ${{ github.event.inputs.build_type }} -j$(nproc)
+          # Use Release for automatic builds, input value for manual builds
+          BUILD_TYPE=${GITHUB_EVENT_NAME == 'workflow_dispatch' && github.event.inputs.build_type || 'Release'}
+          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -f ../CMakeLists_Qt6.txt ..
+          cmake --build . --config $BUILD_TYPE -j$(nproc)
 
       - name: Create Installer Project
         run: |
@@ -101,18 +106,17 @@ jobs:
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lyricstator-linux-x64-${{ github.event.inputs.build_type }}
+          name: lyricstator-linux-x64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}
           path: |
             build_qt_linux/Lyricstator_Qt6
             build_qt_linux/installer/
           if-no-files-found: warn
 
   # -------------------------------
-  # 3️⃣ Build Windows (x64) - Reliable
+  # 3️⃣ Build Windows (x64) - Automatic + Manual
   # -------------------------------
   build-windows-x64:
     needs: setup-qt6
-    if: ${{ github.event.inputs.platform == 'linux-windows' || github.event.inputs.platform == 'windows-only' || github.event.inputs.platform == 'all-platforms' }}
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -136,8 +140,10 @@ jobs:
         run: |
           mkdir -p build_qt_windows
           cd build_qt_windows
-          cmake -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type }} -f ../CMakeLists_Qt6.txt ..
-          cmake --build . --config ${{ github.event.inputs.build_type }} --parallel
+          # Use Release for automatic builds, input value for manual builds
+          $BUILD_TYPE = if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') { '${{ github.event.inputs.build_type }}' } else { 'Release' }
+          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -f ../CMakeLists_Qt6.txt ..
+          cmake --build . --config $BUILD_TYPE --parallel
 
       - name: Create Installer Project
         shell: pwsh
@@ -154,18 +160,18 @@ jobs:
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lyricstator-windows-x64-${{ github.event.inputs.build_type }}
+          name: lyricstator-windows-x64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}
           path: |
             build_qt_windows/Lyricstator_Qt6.exe
             build_qt_windows/installer/
           if-no-files-found: warn
 
   # -------------------------------
-  # 4️⃣ Build macOS (x64) - Optional, may be unreliable
+  # 4️⃣ Build macOS (x64) - Manual Only
   # -------------------------------
   build-macos-x64:
     needs: setup-qt6
-    if: ${{ (github.event.inputs.platform == 'all-platforms' || github.event.inputs.include_macos == 'true') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'all-platforms' || github.event.inputs.include_macos == 'true') }}
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -220,9 +226,16 @@ jobs:
       - name: Build Summary
         run: |
           echo "=== Lyricstator Qt6 Build Summary ==="
-          echo "Build Type: ${{ github.event.inputs.build_type }}"
-          echo "Target Platform: ${{ github.event.inputs.platform }}"
-          echo "Include macOS: ${{ github.event.inputs.include_macos }}"
+          echo "Trigger: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Build Type: ${{ github.event.inputs.build_type }}"
+            echo "Target Platform: ${{ github.event.inputs.platform }}"
+            echo "Include macOS: ${{ github.event.inputs.include_macos }}"
+          else
+            echo "Build Type: Release (automatic)"
+            echo "Target Platform: Linux + Windows (automatic)"
+            echo "Include macOS: No (manual builds only)"
+          fi
           echo ""
           echo "Build Status:"
           echo "- Linux x64: ${{ needs.build-linux-x64.result }}"
@@ -231,19 +244,28 @@ jobs:
           echo ""
           echo "Artifacts created:"
           if [ "${{ needs.build-linux-x64.result }}" != "skipped" ]; then
-            echo "- Linux: lyricstator-linux-x64-${{ github.event.inputs.build_type }}"
+            echo "- Linux: lyricstator-linux-x64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}"
           fi
           if [ "${{ needs.build-windows-x64.result }}" != "skipped" ]; then
-            echo "- Windows: lyricstator-windows-x64-${{ github.event.inputs.build_type }}"
+            echo "- Windows: lyricstator-windows-x64-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_type || 'Release' }}"
           fi
           if [ "${{ needs.build-macos-x64.result }}" != "skipped" ]; then
             echo "- macOS: lyricstator-macos-x64-${{ github.event.inputs.build_type }}"
           fi
           echo ""
+          echo "Build Mode:"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "- Manual build with custom options"
+          else
+            echo "- Automatic build (push/pull request)"
+            echo "- Always builds Linux + Windows"
+            echo "- macOS builds require manual trigger"
+          fi
+          echo ""
           echo "Platform Notes:"
-          echo "- Linux: Most reliable, recommended for testing"
-          echo "- Windows: Reliable, good for distribution"
-          echo "- macOS: Optional, may have issues in CI"
+          echo "- Linux: Most reliable, always built"
+          echo "- Windows: Reliable, always built"
+          echo "- macOS: Manual only, may have issues in CI"
           echo ""
           echo "Each artifact contains:"
           echo "- Application binary"
