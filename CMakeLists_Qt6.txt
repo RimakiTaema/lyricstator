@@ -312,21 +312,27 @@ install(DIRECTORY samples/
 )
 
 # ------------------------------
-# cQtdeployer support (Desktop only)
+# Qt Installer Framework support (Desktop only)
 # ------------------------------
 if(NOT ANDROID)
-    # Create deployment script
-    configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/deploy_qt.sh.in
-        ${CMAKE_CURRENT_BINARY_DIR}/deploy_qt.sh
-        @ONLY
+    # Find Qt Installer Framework
+    find_package(Qt6 REQUIRED COMPONENTS InstallerFramework)
+    
+    # Create installer project
+    set(INSTALLER_PROJECT "${CMAKE_CURRENT_BINARY_DIR}/installer")
+    
+    # Add custom target for installer creation
+    add_custom_target(installer
+        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/create_installer.sh
+        DEPENDS Lyricstator_Qt6
+        COMMENT "Creating installer with Qt Installer Framework"
     )
     
-    # Add custom target for deployment
-    add_custom_target(deploy
-        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deploy_qt.sh
-        DEPENDS Lyricstator_Qt6
-        COMMENT "Deploying Qt6 application with cQtdeployer"
+    # Create installer creation script
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/create_installer.sh.in
+        ${CMAKE_CURRENT_BINARY_DIR}/create_installer.sh
+        @ONLY
     )
 endif()
 
@@ -342,6 +348,6 @@ if(ANDROID)
     message(STATUS "Android ABIs: armeabi-v7a, arm64-v8a")
 else()
     message(STATUS "Desktop build: YES")
-    message(STATUS "cQtdeployer support: YES")
+    message(STATUS "Qt Installer Framework support: YES")
 endif()
 message(STATUS "=====================================")

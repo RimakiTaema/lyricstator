@@ -1,6 +1,6 @@
 # Lyricstator Qt6 Build Guide
 
-This guide covers building Lyricstator with Qt6 for both desktop and Android platforms, including deployment using cQtdeployer.
+This guide covers building Lyricstator with Qt6 for both desktop and Android platforms, including deployment using Qt Installer Framework.
 
 ## Overview
 
@@ -8,7 +8,7 @@ The project has been migrated to Qt6 while maintaining the existing SDL/TGUI bui
 
 - **Modern Qt6 GUI** - Native look and feel on all platforms
 - **Cross-platform deployment** - Desktop (Linux, Windows, macOS) and Android
-- **cQtdeployer integration** - Automated deployment for PC builds
+- **Qt Installer Framework integration** - Professional installer creation for PC builds
 - **Dual build system** - Qt6 and SDL/TGUI builds coexist
 
 ## Prerequisites
@@ -44,17 +44,25 @@ brew install qt6 cmake
 - Install Visual Studio 2019+ or MinGW
 - Install CMake
 
-#### cQtdeployer (Optional, for deployment)
+#### Qt Installer Framework (Optional, for installer creation)
 
-**Download from releases:**
+**Install via Qt Online Installer:**
+- Download Qt Online Installer from [Qt Downloads](https://www.qt.io/download)
+- During installation, select "Qt Installer Framework" component
+- Or install via package manager:
+
 ```bash
-# Linux
-wget https://github.com/QuasarApp/CQtDeployer/releases/latest/download/cqtdeployer-*.run
-chmod +x cqtdeployer-*.run
-./cqtdeployer-*.run
+# Ubuntu/Debian
+sudo apt install qt6-tools-dev qt6-tools-dev-tools
 
-# Windows
-# Download .exe installer from GitHub releases
+# Fedora
+sudo dnf install qt6-qttools-devel
+
+# Arch Linux
+sudo pacman -S qt6-tools
+
+# macOS
+brew install qt6-tools
 ```
 
 ### Android Prerequisites
@@ -91,8 +99,8 @@ chmod +x build_qt_desktop.sh
 # Build Debug version
 ./build_qt_desktop.sh Debug
 
-# Build and deploy
-./build_qt_desktop.sh Release deploy
+# Build and create installer
+./build_qt_desktop.sh Release installer
 ```
 
 #### Manual Build
@@ -106,8 +114,8 @@ cmake -DCMAKE_BUILD_TYPE=Release -f ../CMakeLists_Qt6.txt ..
 # Build
 cmake --build . --config Release -j$(nproc)
 
-# Deploy (optional)
-make deploy
+# Create installer (optional)
+make installer
 ```
 
 ### Android Build
@@ -173,8 +181,7 @@ cmake --build . --config Release -j$(nproc)
 ├── CMakeLists.txt               # Original SDL/TGUI build
 ├── CMakeLists_Qt6.txt           # Qt6 build configuration
 ├── lyricstator.pro              # Qt6 qmake project file
-├── cqtdeployer.json             # cQtdeployer configuration
-├── deploy_qt.sh.in              # Deployment script template
+├── create_installer.sh.in       # Installer creation script template
 ├── build_qt_desktop.sh          # Desktop build script
 ├── build_qt_android.sh          # Android build script
 └── BUILD_QT6.md                 # This file
@@ -217,39 +224,44 @@ cmake --build . --config Release -j$(nproc)
 
 ## Deployment
 
-### Desktop Deployment with cQtdeployer
+### Desktop Deployment with Qt Installer Framework
 
-cQtdeployer automatically bundles Qt6 libraries and dependencies for distribution.
+Qt Installer Framework creates professional installers for distribution across all desktop platforms.
 
 #### Using Build Script
 ```bash
-# Build and deploy in one step
-./build_qt_desktop.sh Release deploy
+# Build and create installer project in one step
+./build_qt_desktop.sh Release installer
 ```
 
-#### Manual Deployment
+#### Manual Installer Creation
 ```bash
 # After building
 cd build_qt_desktop
-make deploy
+make installer
 
-# Or run deployment script directly
-./deploy_qt.sh
+# Build the final installer
+cd installer && ./build_installer.sh
 ```
 
-#### Custom cQtdeployer Configuration
-```bash
-# Using configuration file
-cqtdeployer -bin ./Lyricstator_Qt6 -confFile ../cqtdeployer.json
-```
+#### Qt Installer Framework Features
 
-The deployed application will be in `build_qt_desktop/deploy/` and includes:
-- Application binary
-- Qt6 libraries
-- System libraries
-- Assets and samples
-- Launcher scripts
-- Documentation
+The installer project is created in `build_qt_desktop/installer/` and includes:
+- **Professional installer**: Modern wizard-style installation
+- **Cross-platform**: Works on Windows, macOS, and Linux
+- **Customizable**: Branded with your application's look and feel
+- **Dependencies**: Automatically handles Qt6 runtime dependencies
+- **Updates**: Supports automatic updates and repositories
+- **Shortcuts**: Creates desktop and start menu shortcuts
+- **Uninstaller**: Provides clean removal of the application
+
+#### Customization
+
+You can customize the installer by editing:
+- `installer/config/config.xml` - Main installer configuration
+- `installer/packages/com.lyricstator.core/meta/package.xml` - Package information
+- `installer/packages/com.lyricstator.core/meta/installscript.qs` - Installation logic
+- `installer/lyricstator_installer.qbs` - Build configuration
 
 ### Android Deployment
 
@@ -326,18 +338,20 @@ ls $ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake
 
 ### Deployment Issues
 
-**cQtdeployer not found:**
+**Qt Installer Framework not found:**
 ```bash
-# Install cQtdeployer from GitHub releases
+# Install via Qt Online Installer
 # Or use package manager if available
+sudo apt install qt6-tools-dev qt6-tools-dev-tools
 ```
 
-**Missing libraries in deployment:**
+**Installer build fails:**
 ```bash
-# Check library dependencies
-ldd ./Lyricstator_Qt6
+# Check if qbs is available
+qbs --version
 
-# Add missing libraries to cqtdeployer.json extraLibs
+# Install qbs if needed
+sudo apt install qbs
 ```
 
 **Android APK creation fails:**
@@ -355,7 +369,7 @@ echo $JAVA_HOME
 |---------|-----------|----------------|
 | **GUI Framework** | Native Qt6 | SDL2 + TGUI |
 | **Platform Look** | Native | Custom |
-| **Deployment** | cQtdeployer | Manual |
+| **Deployment** | Qt Installer Framework | Manual |
 | **Android Support** | Yes | Limited |
 | **File Size** | Larger (Qt6 libs) | Smaller |
 | **Development** | Modern C++/Qt | SDL/OpenGL |
@@ -364,9 +378,9 @@ echo $JAVA_HOME
 ## Performance Considerations
 
 ### Binary Size
-- **Qt6 build**: ~30-50MB (after deployment)
+- **Qt6 build**: ~30-50MB (with installer)
 - **SDL build**: ~10-20MB
-- Size increase is due to Qt6 libraries
+- Size increase is due to Qt6 libraries and installer framework
 
 ### Runtime Performance
 - **Qt6**: Hardware-accelerated rendering

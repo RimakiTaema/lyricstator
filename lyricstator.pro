@@ -85,10 +85,8 @@ android {
 
 # Desktop specific configuration
 !android {
-    # Use cQtdeployer for deployment
-    CONFIG += cqtdeployer
-    CQTDEPLOYER_TARGET = desktop
-    CQTDEPLOYER_OPTIONS = --qml --qmldir --recursive
+    # Use Qt Installer Framework for deployment
+    # This will be configured in the installer project
 }
 
 # Include paths

@@ -138,15 +138,15 @@ echo "Binary location: $PWD/$BINARY_NAME"
 echo ""
 echo "Next steps:"
 echo "1. Test the application: ./$BINARY_NAME"
-echo "2. Deploy with cQtdeployer: make deploy"
-echo "3. Or run deployment script: ../deploy_qt.sh"
+echo "2. Create installer: make installer"
+echo "3. Build installer: cd installer && ./build_installer.sh"
 echo ""
 
-# Optional: Run deployment if requested
-if [ "$2" = "deploy" ]; then
-    echo "Running deployment..."
-    make deploy || {
-        echo "Deployment failed, but build was successful"
+# Optional: Create installer if requested
+if [ "$2" = "installer" ]; then
+    echo "Creating installer..."
+    make installer || {
+        echo "Installer creation failed, but build was successful"
         exit 0
     }
 fi
