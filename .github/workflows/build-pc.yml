@@ -74,7 +74,7 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          arch: 'x86_64'
+          arch: 'linux_x64'
           modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
           aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
@@ -125,7 +125,7 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          arch: 'arm64'
+          arch: 'linux_arm64'
           modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
           aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
@@ -176,7 +176,7 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          arch: 'x86_64'
+          arch: 'win64_msvc2022_64'
           modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
           aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
@@ -231,7 +231,7 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          arch: 'x86_64'
+          arch: 'macos_x64'
           modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
           aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
