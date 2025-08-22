@@ -1,10 +1,27 @@
 name: Build Lyricstator (Android)
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+        - Debug
+        - Release
+      abi:
+        description: 'Target ABI'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - arm64-v8a
+        - armeabi-v7a
+        - x86
+        - x86_64
 
 jobs:
   build:
@@ -12,7 +29,7 @@ jobs:
     
     strategy:
       matrix:
-        abi: [arm64-v8a, armeabi-v7a, x86, x86_64]
+        abi: ${{ github.event.inputs.abi == 'all' && fromJSON('["arm64-v8a", "armeabi-v7a", "x86", "x86_64"]') || fromJSON('["' + github.event.inputs.abi + '"]') }}
 
     steps:
       - name: Checkout repository
@@ -23,6 +40,14 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+
+      - name: Setup Qt6 for Android
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.6.0'
+          arch: 'x64'
+          modules: 'qtcharts qtmultimedia qtmultimediawidgets qtwebengine qtwebview qtlocation qtpositioning qtquick3d qt3d qt5compat'
+          install-deps: true
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -58,6 +83,13 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential cmake ninja-build
 
+      - name: Setup Qt6 Android environment
+        run: |
+          # Set Qt6 Android environment variables
+          echo "QT_ANDROID=$QT_PREFIX" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> $GITHUB_ENV
+
       - name: Prepare Android assets
         run: |
           # Copy assets to Android project
@@ -69,21 +101,14 @@ jobs:
             cp -r samples android/app/src/main/assets/
           fi
 
-      - name: Check Android project structure
+      - name: Create Android CMakeLists.txt for Qt6
         run: |
-          ls -la android/
-          ls -la android/app/
-          if [ -f "android/app/src/main/cpp/CMakeLists.txt" ]; then
-            echo "Found Android CMakeLists.txt"
-            cat android/app/src/main/cpp/CMakeLists.txt
-          else
-            echo "Android CMakeLists.txt not found, creating basic one"
-            mkdir -p android/app/src/main/cpp
-            cat > android/app/src/main/cpp/CMakeLists.txt << 'EOF'
+          mkdir -p android/app/src/main/cpp
+          cat > android/app/src/main/cpp/CMakeLists.txt << 'EOF'
 cmake_minimum_required(VERSION 3.22.1)
 project(lyricstator)
 
-# Include main project CMakeLists.txt
+# Include main project CMakeLists.txt for Qt6
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -99,44 +124,29 @@ target_link_libraries(${PROJECT_NAME}
     ${android-lib}
 )
 EOF
-          fi
 
-      - name: Create Android main activity (if not exists)
+      - name: Create Android main activity for Qt6
         run: |
           mkdir -p android/app/src/main/java/com/lyricstator/app
-          if [ ! -f "android/app/src/main/java/com/lyricstator/app/MainActivity.java" ]; then
-            cat > android/app/src/main/java/com/lyricstator/app/MainActivity.java << 'EOF'
+          cat > android/app/src/main/java/com/lyricstator/app/MainActivity.java << 'EOF'
 package com.lyricstator.app;
 
 import android.app.Activity;
 import android.os.Bundle;
-import org.libsdl.app.SDLActivity;
+import org.qtproject.qt6.android.bindings.QtActivity;
 
-public class MainActivity extends SDLActivity {
+public class MainActivity extends QtActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
     }
-
-    @Override
-    protected String[] getLibraries() {
-        return new String[] {
-            "SDL2",
-            "SDL2_mixer",
-            "SDL2_ttf", 
-            "SDL2_image",
-            "lyricstator"
-        };
-    }
 }
 EOF
-          fi
 
-      - name: Create Android manifest (if not exists)
+      - name: Create Android manifest for Qt6
         run: |
           mkdir -p android/app/src/main
-          if [ ! -f "android/app/src/main/AndroidManifest.xml" ]; then
-            cat > android/app/src/main/AndroidManifest.xml << 'EOF'
+          cat > android/app/src/main/AndroidManifest.xml << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.lyricstator.app">
@@ -144,6 +154,7 @@ EOF
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -163,7 +174,6 @@ EOF
     </application>
 </manifest>
 EOF
-          fi
 
       - name: Create strings.xml
         run: |
@@ -175,23 +185,49 @@ EOF
 </resources>
 EOF
 
-      - name: Download SDL2 Android libraries
+      - name: Create build.gradle for Qt6
         run: |
-          # Download SDL2 development libraries for Android
-          wget -q https://github.com/libsdl-org/SDL/releases/download/release-2.30.0/SDL2-2.30.0.tar.gz
-          tar -xzf SDL2-2.30.0.tar.gz
-          wget -q https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.0/SDL2_mixer-2.8.0.tar.gz  
-          tar -xzf SDL2_mixer-2.8.0.tar.gz
-          wget -q https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-2.22.0.tar.gz
-          tar -xzf SDL2_ttf-2.22.0.tar.gz
-          wget -q https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2.tar.gz
-          tar -xzf SDL2_image-2.8.2.tar.gz
-          
-          # Copy SDL Android project files
-          mkdir -p android/app/src/main/java/org/libsdl/app
-          cp -r SDL2-2.30.0/android-project/app/src/main/java/org/libsdl/app/* android/app/src/main/java/org/libsdl/app/
+          cat > android/app/build.gradle << 'EOF'
+plugins {
+    id 'com.android.application'
+}
 
-      - name: Build Android APK
+android {
+    namespace 'com.lyricstator.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.lyricstator.app"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+
+    ndkVersion "25.2.9519653"
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+}
+EOF
+
+      - name: Build Qt6 Android APK
         working-directory: android
         run: |
           chmod +x ./gradlew
@@ -201,18 +237,43 @@ EOF
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lyricstator-android-${{ matrix.abi }}-debug
+          name: lyricstator-android-${{ matrix.abi }}-${{ github.event.inputs.build_type }}
           path: android/app/build/outputs/apk/debug/*.apk
 
       - name: Build Android AAB (Release)
-        if: matrix.abi == 'arm64-v8a'  # Only build AAB for one architecture
+        if: ${{ github.event.inputs.build_type == 'Release' && matrix.abi == 'arm64-v8a' }}
         working-directory: android
         run: |
           ./gradlew bundleRelease
 
       - name: Upload AAB artifact
-        if: matrix.abi == 'arm64-v8a'
+        if: ${{ github.event.inputs.build_type == 'Release' && matrix.abi == 'arm64-v8a' }}
         uses: actions/upload-artifact@v4
         with:
           name: lyricstator-android-release-aab
           path: android/app/build/outputs/bundle/release/*.aab
+
+  # Build Summary
+  build-summary:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Android Build Summary
+        run: |
+          echo "=== Lyricstator Qt6 Android Build Summary ==="
+          echo "Build Type: ${{ github.event.inputs.build_type }}"
+          echo "Target ABI: ${{ github.event.inputs.abi }}"
+          echo ""
+          echo "Build Status: ${{ needs.build.result }}"
+          echo ""
+          echo "Artifacts created:"
+          echo "- APK: lyricstator-android-*-${{ github.event.inputs.build_type }}"
+          if [ "${{ github.event.inputs.build_type }}" = "Release" ]; then
+            echo "- AAB: lyricstator-android-release-aab (arm64-v8a only)"
+          fi
+          echo ""
+          echo "Each APK contains:"
+          echo "- Qt6 Android application"
+          echo "- Native C++ code"
+          echo "- Android resources and assets"

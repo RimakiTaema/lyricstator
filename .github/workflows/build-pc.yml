@@ -1,179 +1,234 @@
-name: Build Lyricstator
+name: Build Lyricstator (PC)
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+        - Debug
+        - Release
+      platform:
+        description: 'Target platform'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - linux
+        - windows
+        - macos
 
 jobs:
   # -------------------------------
-  # 1️⃣ Setup Repo (runs for all OS/arch)
+  # 1️⃣ Setup Qt6 Environment
   # -------------------------------
-  setup-repo:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            arch: x86_64
-          - os: ubuntu-latest
-            arch: arm64
-          - os: windows-latest
-            arch: x86_64
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Git
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-  # -------------------------------
-  # 2️⃣ Build Libraries (Linux only)
-  # -------------------------------
-  build-libs:
-    needs: setup-repo
-    strategy:
-      matrix:
-        include:
-          - arch: x86_64
-          - arch: arm64
+  setup-qt6:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Linux dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential git cmake pkg-config \
-            libasound2-dev libjack-jackd2-dev libsndfile1-dev \
-            libvorbis-dev libogg-dev libopus-dev libflac-dev \
-            libmpg123-dev libpulse-dev libfreetype6-dev \
-            libglib2.0-dev libx11-dev
-
-      - name: Install ARM64 libraries (cross)
-        if: matrix.arch == 'arm64'
-        run: |
-          sudo dpkg --add-architecture arm64
-          sudo apt update
-          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
-          sudo apt install -y libasound2-dev:arm64 libjack-jackd2-dev:arm64 \
-                              libsndfile1-dev:arm64 libvorbis-dev:arm64 libogg-dev:arm64 \
-                              libopus-dev:arm64 libflac-dev:arm64 libmpg123-dev:arm64 \
-                              libpulse-dev:arm64 libfreetype6-dev:arm64 libglib2.0-dev:arm64 \
-                              libx11-dev:arm64 || true
-
-      - name: Build OpusFile
-        run: |
-          git clone --depth 1 https://github.com/xiph/opusfile.git
-          cd opusfile
-          ./autogen.sh
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            ./configure --prefix=$HOME/opusfile --host=aarch64-linux-gnu \
-                        CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++
-          else
-            ./configure --prefix=$HOME/opusfile
-          fi
-          make -j$(nproc)
-          make install
-
-      - name: Build FluidSynth
-        run: |
-          git clone --depth 1 --branch v2.4.7 https://github.com/FluidSynth/fluidsynth.git
-          cd fluidsynth
-          mkdir build && cd build
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth \
-              -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
-          else
-            cmake .. -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/fluidsynth
-          fi
-          make -j$(nproc)
-          make install
-
-      - name: Upload libraries
-        uses: actions/upload-artifact@v4
+      - name: Setup Qt6
+        uses: jurplel/install-qt-action@v4
         with:
-          name: libs-${{ matrix.arch }}
-          path: |
-            $HOME/opusfile
-            $HOME/fluidsynth
+          version: '6.6.0'
+          arch: 'x64'
+          modules: 'qtcharts qtmultimedia qtmultimediawidgets qtwebengine qtwebview qtlocation qtpositioning qtquick3d qt3d qt5compat'
+          install-deps: true
+
+      - name: Setup Qt Installer Framework
+        run: |
+          # Install Qt Installer Framework
+          sudo apt update
+          sudo apt install -y qt6-tools-dev qt6-tools-dev-tools qbs
+
+      - name: Cache Qt6
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.QT_PREFIX }}
+          key: qt6-${{ runner.os }}-${{ hashFiles('**/CMakeLists_Qt6.txt') }}
 
   # -------------------------------
-  # 3️⃣ Build App (Linux + Windows)
+  # 2️⃣ Build Linux (x86_64)
   # -------------------------------
-  build-app:
-    needs: build-libs
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            arch: x86_64
-          - os: ubuntu-latest
-            arch: arm64
-          - os: windows-latest
-            arch: x86_64
-    runs-on: ${{ matrix.os }}
+  build-linux-x64:
+    needs: setup-qt6
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'linux' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download libraries
-        if: runner.os == 'Linux'
-        uses: actions/download-artifact@v4
+      - name: Setup Qt6
+        uses: jurplel/install-qt-action@v4
         with:
-          name: libs-${{ matrix.arch }}
-          path: $HOME
+          version: '6.6.0'
+          arch: 'x64'
+          modules: 'qtcharts qtmultimedia qtmultimediawidgets qtwebengine qtwebview qtlocation qtpositioning qtquick3d qt3d qt5compat'
+          install-deps: true
 
-      - name: Build Lyricstator
-        if: runner.os == 'Linux'
+      - name: Setup Qt Installer Framework
         run: |
-          mkdir -p build && cd build
-          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-            cmake .. \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=OFF \
-              -DSDL_SHARED=OFF \
-              -DSDL_STATIC=ON \
-              -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth" \
-              -DCMAKE_SYSTEM_NAME=Linux \
-              -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-              -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-              -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
-          else
-            cmake .. \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=OFF \
-              -DSDL_SHARED=OFF \
-              -DSDL_STATIC=ON \
-              -DCMAKE_PREFIX_PATH="$HOME/opusfile;$HOME/fluidsynth"
-          fi
-          cmake --build . --parallel $(nproc)
+          sudo apt update
+          sudo apt install -y qt6-tools-dev qt6-tools-dev-tools qbs cmake build-essential
 
-      - name: Build Lyricstator (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Build Lyricstator Qt6
         run: |
-          mkdir -p build
-          cd build
-          cmake .. `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DBUILD_SHARED_LIBS=OFF `
-            -DSDL_SHARED=OFF `
-            -DSDL_STATIC=ON
-          cmake --build . --config Release --parallel
+          mkdir -p build_qt_linux && cd build_qt_linux
+          cmake -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type }} -f ../CMakeLists_Qt6.txt ..
+          cmake --build . --config ${{ github.event.inputs.build_type }} -j$(nproc)
 
-      - name: Upload build artifact
+      - name: Create Installer Project
+        run: |
+          cd build_qt_linux
+          make installer
+
+      - name: Build Installer
+        run: |
+          cd build_qt_linux/installer
+          chmod +x build_installer.sh
+          ./build_installer.sh
+
+      - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lyricstator-${{ matrix.os }}-${{ matrix.arch }}
+          name: lyricstator-linux-x64-${{ github.event.inputs.build_type }}
           path: |
-            build/lyricstator
-            build/Release/lyricstator.exe
-            build/lyricstator.exe
-            build/*.so
-            build/*.dll
+            build_qt_linux/Lyricstator_Qt6
+            build_qt_linux/installer/
           if-no-files-found: warn
+
+  # -------------------------------
+  # 3️⃣ Build Windows (x64)
+  # -------------------------------
+  build-windows-x64:
+    needs: setup-qt6
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows' }}
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Qt6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.6.0'
+          arch: 'x64'
+          modules: 'qtcharts qtmultimedia qtmultimediawidgets qtwebengine qtwebview qtlocation qtpositioning qtquick3d qt3d qt5compat'
+          install-deps: true
+
+      - name: Setup Qt Installer Framework
+        run: |
+          # Install Qt Installer Framework via winget or chocolatey
+          winget install Qt.QtInstallerFramework || choco install qt-installer-framework
+
+      - name: Build Lyricstator Qt6
+        shell: pwsh
+        run: |
+          mkdir -p build_qt_windows
+          cd build_qt_windows
+          cmake -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type }} -f ../CMakeLists_Qt6.txt ..
+          cmake --build . --config ${{ github.event.inputs.build_type }} --parallel
+
+      - name: Create Installer Project
+        shell: pwsh
+        run: |
+          cd build_qt_windows
+          make installer
+
+      - name: Build Installer
+        shell: pwsh
+        run: |
+          cd build_qt_windows/installer
+          .\build_installer.sh
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyricstator-windows-x64-${{ github.event.inputs.build_type }}
+          path: |
+            build_qt_windows/Lyricstator_Qt6.exe
+            build_qt_windows/installer/
+          if-no-files-found: warn
+
+  # -------------------------------
+  # 4️⃣ Build macOS (x64)
+  # -------------------------------
+  build-macos-x64:
+    needs: setup-qt6
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'macos' }}
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Qt6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.6.0'
+          arch: 'x64'
+          modules: 'qtcharts qtmultimedia qtmultimediawidgets qtwebengine qtwebview qtlocation qtpositioning qtquick3d qt3d qt5compat'
+          install-deps: true
+
+      - name: Setup Qt Installer Framework
+        run: |
+          brew install qt6-tools qbs
+
+      - name: Build Lyricstator Qt6
+        run: |
+          mkdir -p build_qt_macos && cd build_qt_macos
+          cmake -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type }} -f ../CMakeLists_Qt6.txt ..
+          cmake --build . --config ${{ github.event.inputs.build_type }} -j$(sysctl -n hw.ncpu)
+
+      - name: Create Installer Project
+        run: |
+          cd build_qt_macos
+          make installer
+
+      - name: Build Installer
+        run: |
+          cd build_qt_macos/installer
+          chmod +x build_installer.sh
+          ./build_installer.sh
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyricstator-macos-x64-${{ github.event.inputs.build_type }}
+          path: |
+            build_qt_macos/Lyricstator_Qt6
+            build_qt_macos/installer/
+          if-no-files-found: warn
+
+  # -------------------------------
+  # 5️⃣ Build Summary
+  # -------------------------------
+  build-summary:
+    needs: [build-linux-x64, build-windows-x64, build-macos-x64]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Build Summary
+        run: |
+          echo "=== Lyricstator Qt6 Build Summary ==="
+          echo "Build Type: ${{ github.event.inputs.build_type }}"
+          echo "Target Platform: ${{ github.event.inputs.platform }}"
+          echo ""
+          echo "Build Status:"
+          echo "- Linux x64: ${{ needs.build-linux-x64.result }}"
+          echo "- Windows x64: ${{ needs.build-windows-x64.result }}"
+          echo "- macOS x64: ${{ needs.build-macos-x64.result }}"
+          echo ""
+          echo "Artifacts created:"
+          echo "- Linux: lyricstator-linux-x64-${{ github.event.inputs.build_type }}"
+          echo "- Windows: lyricstator-windows-x64-${{ github.event.inputs.build_type }}"
+          echo "- macOS: lyricstator-macos-x64-${{ github.event.inputs.build_type }}"
+          echo ""
+          echo "Each artifact contains:"
+          echo "- Application binary"
+          echo "- Qt Installer Framework project"
+          echo "- Ready-to-build installer"
