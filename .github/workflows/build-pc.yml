@@ -75,7 +75,7 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           arch: 'linux_x64'
-          modules: 'qtcharts qtmultimedia qtmultimediawidgets'
+          modules: 'qtbase'
           install-deps: true
           aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
 
@@ -126,7 +126,7 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           arch: 'linux_arm64'
-          modules: 'qtcharts qtmultimedia qtmultimediawidgets'
+          modules: 'qtbase'
           install-deps: true
           aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
 
@@ -177,7 +177,7 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           arch: 'win64_msvc2022_64'
-          modules: 'qtcharts qtmultimedia qtmultimediawidgets'
+          modules: 'qtbase'
           install-deps: true
           aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
 
@@ -232,7 +232,7 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           arch: 'macos_x64'
-          modules: 'qtcharts qtmultimedia qtmultimediawidgets'
+          modules: 'qtbase'
           install-deps: true
           aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
 

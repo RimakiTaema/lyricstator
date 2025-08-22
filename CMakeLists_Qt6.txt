@@ -18,7 +18,7 @@ endif()
 # ------------------------------
 # Qt6 Configuration
 # ------------------------------
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Multimedia MultimediaWidgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
 # Enable Qt MOC, UIC, and RCC
 set(CMAKE_AUTOMOC ON)
