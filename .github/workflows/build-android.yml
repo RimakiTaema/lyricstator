@@ -44,7 +44,7 @@ jobs:
       - name: Setup Qt6 for Android
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.7.0'
+          version: '6.8.0'
           arch: 'x64'
           modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
