@@ -1,0 +1,97 @@
+{
+    "name": "Lyricstator Qt6",
+    "description": "Karaoke and Lyric Visualization System",
+    "version": "1.0.0",
+    "organization": "Lyricstator",
+    "homepage": "https://github.com/lyricstator/lyricstator",
+    
+    "deployment": {
+        "targetDir": "deploy",
+        "deployQt": true,
+        "deploySystem": true,
+        "recursiveDepth": 5,
+        "verbose": 2,
+        "always-overwrite": true,
+        "force": false,
+        "clear": false
+    },
+    
+    "platform": {
+        "linux": {
+            "stripBin": true,
+            "createDesktopFile": true,
+            "icon": "assets/icon.png",
+            "categories": ["AudioVideo", "Audio", "Music"]
+        },
+        "windows": {
+            "icon": "assets/icon.ico",
+            "createInstaller": false,
+            "stripBin": false
+        },
+        "macos": {
+            "icon": "assets/icon.icns",
+            "createDMG": false,
+            "bundleIdentifier": "org.lyricstator.lyricstator"
+        }
+    },
+    
+    "extraLibs": [
+        "SDL2",
+        "SDL2_mixer"
+    ],
+    
+    "extraData": [
+        {
+            "from": "assets",
+            "to": "assets",
+            "recursive": true
+        },
+        {
+            "from": "samples",
+            "to": "samples",
+            "recursive": true
+        },
+        {
+            "from": "README.md",
+            "to": "README.md"
+        },
+        {
+            "from": "LICENSE",
+            "to": "LICENSE"
+        }
+    ],
+    
+    "ignore": [
+        "*.debug",
+        "*.pdb",
+        "*.map",
+        "*.exp",
+        "*.ilk",
+        "CMakeFiles",
+        "*.cmake",
+        "Makefile",
+        "*.o",
+        "*.obj",
+        "*.tmp",
+        "*.temp",
+        ".git",
+        ".github",
+        "build",
+        "*.pro.user*",
+        "*.qmlc",
+        "*.jsc"
+    ],
+    
+    "qml": {
+        "qmlDir": "",
+        "qmlSource": ""
+    },
+    
+    "plugins": {
+        "audio": true,
+        "multimedia": true,
+        "platforms": true,
+        "imageformats": true,
+        "iconengines": true
+    }
+}
