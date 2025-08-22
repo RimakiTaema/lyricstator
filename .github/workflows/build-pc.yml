@@ -44,9 +44,9 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.6.0'
+          version: '6.7.0'
           arch: 'x64'
-          modules: 'qtcharts qtmultimedia qtmultimediawidgets qtwebengine qtwebview qtlocation qtpositioning qtquick3d qt3d qt5compat'
+          modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
 
       - name: Setup Qt Installer Framework
@@ -74,9 +74,9 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.6.0'
+          version: '6.7.0'
           arch: 'x64'
-          modules: 'qtcharts qtmultimedia qtmultimediawidgets qtwebengine qtwebview qtlocation qtpositioning qtquick3d qt3d qt5compat'
+          modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
 
       - name: Setup Qt Installer Framework
@@ -125,9 +125,9 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.6.0'
+          version: '6.7.0'
           arch: 'x64'
-          modules: 'qtcharts qtmultimedia qtmultimediawidgets qtwebengine qtwebview qtlocation qtpositioning qtquick3d qt3d qt5compat'
+          modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
 
       - name: Setup Qt Installer Framework
@@ -180,9 +180,9 @@ jobs:
       - name: Setup Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.6.0'
+          version: '6.7.0'
           arch: 'x64'
-          modules: 'qtcharts qtmultimedia qtmultimediawidgets qtwebengine qtwebview qtlocation qtpositioning qtquick3d qt3d qt5compat'
+          modules: 'qtcharts qtmultimedia qtmultimediawidgets'
           install-deps: true
 
       - name: Setup Qt Installer Framework
