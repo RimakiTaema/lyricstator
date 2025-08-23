@@ -47,9 +47,8 @@ FetchContent_MakeAvailable(jsoncpp)
 set(CORE_SOURCES
     src/core/QtApplication.cpp
     src/core/QtConfigManager.cpp
-    src/core/LyricParser.cpp
-    src/core/MidiParser.cpp
-    src/core/SongManager.cpp
+    src/core/QtAssetManager.cpp
+    src/core/QtSettingsManager.cpp
 )
 
 set(AUDIO_SOURCES
@@ -93,9 +92,8 @@ set(SYNC_SOURCES
 set(CORE_HEADERS
     src/core/QtApplication.h
     src/core/QtConfigManager.h
-    src/core/LyricParser.h
-    src/core/MidiParser.h
-    src/core/SongManager.h
+    src/core/QtAssetManager.h
+    src/core/QtSettingsManager.h
 )
 
 set(AUDIO_HEADERS
