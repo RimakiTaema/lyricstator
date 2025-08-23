@@ -88,6 +88,8 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y build-essential cmake ninja-build
+          # Install SDL2 development dependencies
+          sudo apt install -y libsdl2-dev libsdl2-mixer-dev libx11-dev libxext-dev libxrandr-dev libxss-dev libxinerama-dev libxi-dev libxcursor-dev libxfixes-dev libxrender-dev libxcomposite-dev libxdamage-dev libasound2-dev libpulse-dev libdbus-1-dev libudev-dev libgles2-mesa-dev libegl1-mesa-dev libgles1-mesa-dev libgl1-mesa-dev libglu1-mesa-dev libdrm-dev libgbm-dev libwayland-dev libxkbcommon-dev
 
       - name: Setup Qt6 Android environment
         run: |

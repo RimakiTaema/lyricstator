@@ -60,6 +60,8 @@ jobs:
           # Install Qt Installer Framework
           sudo apt update
           sudo apt install -y qt6-tools-dev qt6-tools-dev-tools qbs
+          # Install SDL2 development dependencies
+          sudo apt install -y libsdl2-dev libsdl2-mixer-dev libx11-dev libxext-dev libxrandr-dev libxss-dev libxinerama-dev libxi-dev libxcursor-dev libxfixes-dev libxrender-dev libxcomposite-dev libxdamage-dev libasound2-dev libpulse-dev libdbus-1-dev libudev-dev libgles2-mesa-dev libegl1-mesa-dev libgles1-mesa-dev libgl1-mesa-dev libglu1-mesa-dev libdrm-dev libgbm-dev libwayland-dev libxkbcommon-dev
 
       - name: Cache Qt6
         uses: actions/cache@v4
@@ -95,6 +97,8 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y qt6-tools-dev qt6-tools-dev-tools qbs cmake build-essential
+          # Install SDL2 development dependencies
+          sudo apt install -y libsdl2-dev libsdl2-mixer-dev libx11-dev libxext-dev libxrandr-dev libxss-dev libxinerama-dev libxi-dev libxcursor-dev libxfixes-dev libxrender-dev libxcomposite-dev libxdamage-dev libxrandr-dev libxss-dev libxinerama-dev libxi-dev libxcursor-dev libxfixes-dev libxrender-dev libxcomposite-dev libxdamage-dev libasound2-dev libpulse-dev libdbus-1-dev libudev-dev libgles2-mesa-dev libegl1-mesa-dev libgles1-mesa-dev libgl1-mesa-dev libglu1-mesa-dev libdrm-dev libgbm-dev libwayland-dev libxkbcommon-dev
 
       - name: Build Lyricstator Qt6
         run: |
@@ -159,6 +163,8 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y qt6-tools-dev qt6-tools-dev-tools qbs cmake build-essential
+          # Install SDL2 development dependencies
+          sudo apt install -y libsdl2-dev libsdl2-mixer-dev libx11-dev libxext-dev libxrandr-dev libxss-dev libxinerama-dev libxi-dev libxcursor-dev libxfixes-dev libxrender-dev libxcomposite-dev libxdamage-dev libxrandr-dev libxss-dev libxinerama-dev libxi-dev libxcursor-dev libxfixes-dev libxrender-dev libxcomposite-dev libxdamage-dev libasound2-dev libpulse-dev libdbus-1-dev libudev-dev libgles2-mesa-dev libegl1-mesa-dev libgles1-mesa-dev libgl1-mesa-dev libglu1-mesa-dev libdrm-dev libgbm-dev libwayland-dev libxkbcommon-dev
 
       - name: Build Lyricstator Qt6
         run: |
