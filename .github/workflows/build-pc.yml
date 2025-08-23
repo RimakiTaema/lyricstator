@@ -200,30 +200,48 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Qt6
-        shell: pwsh
-        run: |
-          # Install Qt6 using winget
-          winget install Qt.Qt6 || choco install qt6
-          
-          # Set environment variables
-          $env:QT_PREFIX = "C:\Qt\6.8.3\msvc2022_64"
-          $env:PATH = "$env:QT_PREFIX\bin;$env:PATH"
-          
-          # Verify installation
-          qmake6 --version
+        uses: jurplel/install-qt-action@v4
+        with:
+          arch: 'win64_msvc2022_64'
+          install-deps: true
 
       - name: Setup Qt Installer Framework
+        shell: pwsh
         run: |
-          # Install Qt Installer Framework via winget or chocolatey
-          winget install Qt.QtInstallerFramework || choco install qt-installer-framework
+          # Try to install Qt Installer Framework
+          try {
+            # Try chocolatey first
+            choco install qt-installer-framework -y
+          } catch {
+            Write-Host "Chocolatey not available for Qt Installer Framework"
+            Write-Host "Will use Qt6 built-in tools instead"
+          }
 
       - name: Build Lyricstator Qt6
         shell: pwsh
         run: |
+          # Verify Qt6 installation
+          Write-Host "Checking Qt6 installation..."
+          if (Test-Path "$env:QT_PREFIX\bin\qmake.exe") {
+            Write-Host "Qt6 found at $env:QT_PREFIX"
+            & "$env:QT_PREFIX\bin\qmake.exe" --version
+          } else {
+            Write-Host "Qt6 not found at $env:QT_PREFIX"
+            Write-Host "Available Qt installations:"
+            Get-ChildItem "C:\Qt" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  $_" }
+            exit 1
+          }
+          
           mkdir -p build_qt_windows_x86_64
           cd build_qt_windows_x86_64
           # Use Release for automatic builds, input value for manual builds
-          $BUILD_TYPE = if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') { '${{ github.event.inputs.build_type }}' } else { 'Release' }
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $BUILD_TYPE = "${{ github.event.inputs.build_type }}"
+          } else {
+            $BUILD_TYPE = "Release"
+          }
+          Write-Host "Build type: $BUILD_TYPE"
+          
           cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -f ../CMakeLists_Qt6.txt ..
           cmake --build . --config $BUILD_TYPE --parallel
 
