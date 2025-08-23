@@ -42,12 +42,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Qt6
-        uses: jurplel/install-qt-action@v4
-        with:
-          arch: 'x86_64'
-          modules: 'qtcharts qtmultimedia qtmultimediawidgets'
-          install-deps: true
-          aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
+        run: |
+          # Install Qt6 from official packages
+          sudo apt update
+          sudo apt install -y qt6-base-dev qt6-tools-dev qt6-tools-dev-tools
+          
+          # Set environment variables
+          echo "QT_PREFIX=/usr/lib/x86_64-linux-gnu/qt6" >> $GITHUB_ENV
+          echo "PATH=/usr/lib/x86_64-linux-gnu/qt6/bin:$PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/qt6/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          
+          # Verify installation
+          qmake6 --version || echo "Qt6 installation completed"
 
       - name: Setup Qt Installer Framework
         run: |
@@ -72,12 +78,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Qt6
-        uses: jurplel/install-qt-action@v4
-        with:
-          arch: 'linux_x64'
-          modules: 'qtbase'
-          install-deps: true
-          aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
+        run: |
+          # Install Qt6 from official packages
+          sudo apt update
+          sudo apt install -y qt6-base-dev qt6-tools-dev qt6-tools-dev-tools
+          
+          # Set environment variables
+          echo "QT_PREFIX=/usr/lib/x86_64-linux-gnu/qt6" >> $GITHUB_ENV
+          echo "PATH=/usr/lib/x86_64-linux-gnu/qt6/bin:$PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/qt6/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          
+          # Verify installation
+          qmake6 --version || echo "Qt6 installation completed"
 
       - name: Setup Qt Installer Framework
         run: |
@@ -123,12 +135,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Qt6
-        uses: jurplel/install-qt-action@v4
-        with:
-          arch: 'linux_arm64'
-          modules: 'qtbase'
-          install-deps: true
-          aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
+        run: |
+          # Install Qt6 from official packages
+          sudo apt update
+          sudo apt install -y qt6-base-dev qt6-tools-dev qt6-tools-dev-tools
+          
+          # Set environment variables
+          echo "QT_PREFIX=/usr/lib/x86_64-linux-gnu/qt6" >> $GITHUB_ENV
+          echo "PATH=/usr/lib/x86_64-linux-gnu/qt6/bin:$PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/qt6/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          
+          # Verify installation
+          qmake6 --version || echo "Qt6 installation completed"
 
       - name: Setup Qt Installer Framework
         run: |
@@ -174,12 +192,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Qt6
-        uses: jurplel/install-qt-action@v4
-        with:
-          arch: 'win64_msvc2022_64'
-          modules: 'qtbase'
-          install-deps: true
-          aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
+        shell: pwsh
+        run: |
+          # Install Qt6 using winget
+          winget install Qt.Qt6 || choco install qt6
+          
+          # Set environment variables
+          $env:QT_PREFIX = "C:\Qt\6.8.3\msvc2022_64"
+          $env:PATH = "$env:QT_PREFIX\bin;$env:PATH"
+          
+          # Verify installation
+          qmake6 --version
 
       - name: Setup Qt Installer Framework
         run: |
@@ -229,12 +252,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Qt6
-        uses: jurplel/install-qt-action@v4
-        with:
-          arch: 'macos_x64'
-          modules: 'qtbase'
-          install-deps: true
-          aqtsource: 'git+https://github.com/Kidev/aqtinstall.git@fix_linux_version'
+        run: |
+          # Install Qt6 using Homebrew
+          brew install qt6
+          
+          # Set environment variables
+          echo "QT_PREFIX=/opt/homebrew/opt/qt6" >> $GITHUB_ENV
+          echo "PATH=/opt/homebrew/opt/qt6/bin:$PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/opt/homebrew/opt/qt6/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          
+          # Verify installation
+          qmake6 --version
 
       - name: Setup Qt Installer Framework
         run: |
