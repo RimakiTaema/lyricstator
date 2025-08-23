@@ -90,6 +90,8 @@ jobs:
           sudo apt install -y build-essential cmake ninja-build
           # Install audio development libraries for Qt6
           sudo apt install -y libpulse-dev libasound2-dev libjack-jackd2-dev libpipewire-0.3-dev libx11-dev libxext-dev
+          # Install additional audio codec libraries
+          sudo apt install -y libopusfile-dev libopus-dev libvorbis-dev libflac-dev libmp3lame-dev
 
       - name: Setup Qt6 Android environment
         run: |

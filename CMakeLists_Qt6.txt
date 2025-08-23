@@ -45,9 +45,6 @@ FetchContent_MakeAvailable(jsoncpp)
 # Source Files
 # ------------------------------
 set(CORE_SOURCES
-    src/core/Application.cpp
-    src/core/AssetManager.cpp
-    src/core/AudioEngine.cpp
     src/core/ConfigManager.cpp
     src/core/LyricParser.cpp
     src/core/MidiParser.cpp
@@ -55,10 +52,7 @@ set(CORE_SOURCES
 )
 
 set(AUDIO_SOURCES
-    src/audio/AudioDevice.cpp
-    src/audio/AudioProcessor.cpp
-    src/audio/MidiPlayer.cpp
-    src/audio/PitchDetector.cpp
+    # Audio sources removed - will be implemented with Qt6 audio
 )
 
 set(QT_GUI_SOURCES
@@ -97,9 +91,6 @@ set(SYNC_SOURCES
 # Header Files
 # ------------------------------
 set(CORE_HEADERS
-    src/core/Application.h
-    src/core/AssetManager.h
-    src/core/AudioEngine.h
     src/core/ConfigManager.h
     src/core/LyricParser.h
     src/core/MidiParser.h
@@ -107,10 +98,7 @@ set(CORE_HEADERS
 )
 
 set(AUDIO_HEADERS
-    src/audio/AudioDevice.h
-    src/audio/AudioProcessor.h
-    src/audio/MidiPlayer.h
-    src/audio/PitchDetector.h
+    # Audio headers removed - will be implemented with Qt6 audio
 )
 
 set(QT_GUI_HEADERS

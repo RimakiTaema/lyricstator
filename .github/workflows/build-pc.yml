@@ -62,6 +62,8 @@ jobs:
           sudo apt install -y qt6-tools-dev qt6-tools-dev-tools qbs
           # Install audio development libraries for Qt6
           sudo apt install -y libpulse-dev libasound2-dev libjack-jackd2-dev libpipewire-0.3-dev libx11-dev libxext-dev
+          # Install additional audio codec libraries
+          sudo apt install -y libopusfile-dev libopus-dev libvorbis-dev libflac-dev libmp3lame-dev
 
       - name: Cache Qt6
         uses: actions/cache@v4
@@ -99,6 +101,8 @@ jobs:
           sudo apt install -y qt6-tools-dev qt6-tools-dev-tools qbs cmake build-essential
           # Install audio development libraries for Qt6
           sudo apt install -y libpulse-dev libasound2-dev libjack-jackd2-dev libpipewire-0.3-dev libx11-dev libxext-dev
+          # Install additional audio codec libraries
+          sudo apt install -y libopusfile-dev libopus-dev libvorbis-dev libflac-dev libmp3lame-dev
 
       - name: Build Lyricstator Qt6
         run: |
@@ -167,6 +171,8 @@ jobs:
           sudo apt install -y qt6-tools-dev qt6-tools-dev-tools qbs cmake build-essential
           # Install audio development libraries for Qt6
           sudo apt install -y libpulse-dev libasound2-dev libjack-jackd2-dev libpipewire-0.3-dev libx11-dev libxext-dev
+          # Install additional audio codec libraries
+          sudo apt install -y libopusfile-dev libopus-dev libvorbis-dev libflac-dev libmp3lame-dev
 
       - name: Build Lyricstator Qt6
         run: |
