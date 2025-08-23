@@ -107,8 +107,6 @@ jobs:
       - name: Build Lyricstator Qt6
         run: |
           mkdir -p build_qt_linux_x86_64 && cd build_qt_linux_x86_64
-          # Copy the Qt6 CMakeLists file to the build directory
-          cp ../CMakeLists_Qt6.txt ./CMakeLists.txt
           
           # Use Release for automatic builds, input value for manual builds
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -177,8 +175,6 @@ jobs:
       - name: Build Lyricstator Qt6
         run: |
           mkdir -p build_qt_linux_arm64 && cd build_qt_linux_arm64
-          # Copy the Qt6 CMakeLists file to the build directory
-          cp ../CMakeLists_Qt6.txt ./CMakeLists.txt
           
           # Use Release for automatic builds, input value for manual builds
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -264,7 +260,7 @@ jobs:
           }
           Write-Host "Build type: $BUILD_TYPE"
           
-          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -f ../CMakeLists_Qt6.txt ..
+          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -S .. -B .
           cmake --build . --config $BUILD_TYPE --parallel
 
       - name: Create Installer Project
@@ -319,7 +315,7 @@ jobs:
       - name: Build Lyricstator Qt6
         run: |
           mkdir -p build_qt_macos_x86_64 && cd build_qt_macos_x86_64
-          cmake -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type }} -f ../CMakeLists_Qt6.txt ..
+          cmake -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type }} -S .. -B .
           cmake --build . --config ${{ github.event.inputs.build_type }} -j$(sysctl -n hw.ncpu)
 
       - name: Create Installer Project

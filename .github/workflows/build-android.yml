@@ -237,12 +237,11 @@ dependencies {
 }
 EOF
 
-      - name: Build Qt6 Android APK
-        working-directory: android
+      - name: Build Lyricstator Qt6
         run: |
-          chmod +x ./gradlew
-          ./gradlew clean
-          ./gradlew assembleDebug -PABI_FILTER=${{ matrix.abi }}
+          mkdir -p build_qt_android && cd build_qt_android
+          cmake -DCMAKE_BUILD_TYPE=${{ github.event.inputs.build_type }} -DANDROID=ON -S .. -B .
+          cmake --build . --config ${{ github.event.inputs.build_type }} -j$(nproc)
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
