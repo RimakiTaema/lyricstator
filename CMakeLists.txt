@@ -49,10 +49,11 @@ set(CORE_SOURCES
     src/core/QtConfigManager.cpp
     src/core/QtAssetManager.cpp
     src/core/QtSettingsManager.cpp
+    src/core/QtMidiParser.cpp
 )
 
 set(AUDIO_SOURCES
-    # Audio sources removed - will be implemented with Qt6 audio
+    src/audio/QtAudioManager.cpp
 )
 
 set(QT_GUI_SOURCES
@@ -65,9 +66,9 @@ set(QT_GUI_SOURCES
 )
 
 set(UTILS_SOURCES
-    src/utils/FileUtils.cpp
-    src/utils/Logger.cpp
-    src/utils/StringUtils.cpp
+    src/utils/QtFileUtils.cpp
+    src/utils/QtLogger.cpp
+    src/utils/QtStringUtils.cpp
 )
 
 set(AI_SOURCES
@@ -94,10 +95,11 @@ set(CORE_HEADERS
     src/core/QtConfigManager.h
     src/core/QtAssetManager.h
     src/core/QtSettingsManager.h
+    src/core/QtMidiParser.h
 )
 
 set(AUDIO_HEADERS
-    # Audio headers removed - will be implemented with Qt6 audio
+    src/audio/QtAudioManager.h
 )
 
 set(QT_GUI_HEADERS
@@ -110,9 +112,9 @@ set(QT_GUI_HEADERS
 )
 
 set(UTILS_HEADERS
-    src/utils/FileUtils.h
-    src/utils/Logger.h
-    src/utils/StringUtils.h
+    src/utils/QtFileUtils.h
+    src/utils/QtLogger.h
+    src/utils/QtStringUtils.h
 )
 
 set(AI_HEADERS
