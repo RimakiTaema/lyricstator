@@ -100,7 +100,11 @@ jobs:
         run: |
           mkdir -p build_qt_linux_x86_64 && cd build_qt_linux_x86_64
           # Use Release for automatic builds, input value for manual builds
-          BUILD_TYPE=${GITHUB_EVENT_NAME == 'workflow_dispatch' && github.event.inputs.build_type || 'Release'}
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BUILD_TYPE="${{ github.event.inputs.build_type }}"
+          else
+            BUILD_TYPE="Release"
+          fi
           cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -f ../CMakeLists_Qt6.txt ..
           cmake --build . --config $BUILD_TYPE -j$(nproc)
 
@@ -157,7 +161,11 @@ jobs:
         run: |
           mkdir -p build_qt_linux_arm64 && cd build_qt_linux_arm64
           # Use Release for automatic builds, input value for manual builds
-          BUILD_TYPE=${GITHUB_EVENT_NAME == 'workflow_dispatch' && github.event.inputs.build_type || 'Release'}
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BUILD_TYPE="${{ github.event.inputs.build_type }}"
+          else
+            BUILD_TYPE="Release"
+          fi
           cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -f ../CMakeLists_Qt6.txt ..
           cmake --build . --config $BUILD_TYPE -j$(nproc)
 
