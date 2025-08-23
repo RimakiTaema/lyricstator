@@ -6,38 +6,22 @@
 #include <iostream>
 #include <exception>
 
-#include "core/Application.h"
+#include "core/QtApplication.h"
 #include "gui/qt/QtMainWindow.h"
 
 int main(int argc, char* argv[]) {
     try {
-        // Create Qt Application
-        QApplication app(argc, argv);
-        
-        // Set application properties
-        app.setApplicationName("Lyricstator");
-        app.setApplicationVersion("1.0.0");
-        app.setOrganizationName("Lyricstator");
-        app.setOrganizationDomain("lyricstator.org");
-        
         std::cout << "=== Lyricstator v1.0.0 (Qt6) ===" << std::endl;
         std::cout << "Karaoke and Lyric Visualization System" << std::endl;
         std::cout << "=================================" << std::endl;
         
-        // Set application style
-        app.setStyle(QStyleFactory::create("Fusion"));
+        // Create and initialize Qt application
+        Lyricstator::QtApplication app(argc, argv);
         
-        // Create and initialize core application
-        Lyricstator::Application coreApp;
-        
-        if (!coreApp.Initialize()) {
-            std::cerr << "Failed to initialize core application!" << std::endl;
+        if (!app.Initialize()) {
+            std::cerr << "Failed to initialize Qt application!" << std::endl;
             return -1;
         }
-        
-        // Create main window
-        QtMainWindow mainWindow;
-        mainWindow.setApplication(&coreApp);
         
         // Load files from command line arguments if provided
         for (int i = 1; i < argc; ++i) {
@@ -46,13 +30,13 @@ int main(int argc, char* argv[]) {
             
             if (extension == ".mid" || extension == ".midi") {
                 std::cout << "Loading MIDI file from command line: " << filepath.toStdString() << std::endl;
-                mainWindow.loadMidiFile(filepath);
+                app.LoadMidiFile(filepath);
             } else if (extension == ".wav" || extension == ".mp3" || extension == ".ogg") {
                 std::cout << "Loading audio file from command line: " << filepath.toStdString() << std::endl;
-                mainWindow.loadAudioFile(filepath);
+                app.LoadAudioFile(filepath);
             } else if (extension == ".lystr") {
                 std::cout << "Loading lyric script from command line: " << filepath.toStdString() << std::endl;
-                mainWindow.loadLyricScript(filepath);
+                app.LoadLyricScript(filepath);
             } else {
                 std::cout << "Ignoring unsupported file: " << filepath.toStdString() << std::endl;
             }
@@ -74,11 +58,8 @@ int main(int argc, char* argv[]) {
         std::cout << "  Lyrics: .lystr" << std::endl;
         std::cout << "\n" << std::endl;
         
-        // Show main window
-        mainWindow.show();
-        
-        // Run the Qt event loop
-        int result = app.exec();
+        // Run the Qt application
+        int result = app.Run();
         
         std::cout << "Qt Application exited normally" << std::endl;
         return result;

@@ -45,7 +45,8 @@ FetchContent_MakeAvailable(jsoncpp)
 # Source Files
 # ------------------------------
 set(CORE_SOURCES
-    src/core/ConfigManager.cpp
+    src/core/QtApplication.cpp
+    src/core/QtConfigManager.cpp
     src/core/LyricParser.cpp
     src/core/MidiParser.cpp
     src/core/SongManager.cpp
@@ -71,12 +72,11 @@ set(UTILS_SOURCES
 )
 
 set(AI_SOURCES
-    src/ai/PitchAnalyzer.cpp
+    src/ai/NoteDetector.cpp
 )
 
 set(EXPORT_SOURCES
-    src/export/LyricExporter.cpp
-    src/export/AudioExporter.cpp
+    src/export/FormatExporter.cpp
 )
 
 set(SCRIPTING_SOURCES
@@ -84,14 +84,15 @@ set(SCRIPTING_SOURCES
 )
 
 set(SYNC_SOURCES
-    src/sync/LyricSynchronizer.cpp
+    src/sync/SynchronizationManager.cpp
 )
 
 # ------------------------------
 # Header Files
 # ------------------------------
 set(CORE_HEADERS
-    src/core/ConfigManager.h
+    src/core/QtApplication.h
+    src/core/QtConfigManager.h
     src/core/LyricParser.h
     src/core/MidiParser.h
     src/core/SongManager.h
@@ -117,12 +118,11 @@ set(UTILS_HEADERS
 )
 
 set(AI_HEADERS
-    src/ai/PitchAnalyzer.h
+    src/ai/NoteDetector.h
 )
 
 set(EXPORT_HEADERS
-    src/export/LyricExporter.h
-    src/export/AudioExporter.h
+    src/export/FormatExporter.h
 )
 
 set(SCRIPTING_HEADERS
@@ -130,7 +130,7 @@ set(SCRIPTING_HEADERS
 )
 
 set(SYNC_HEADERS
-    src/sync/LyricSynchronizer.h
+    src/sync/SynchronizationManager.h
 )
 
 # ------------------------------
