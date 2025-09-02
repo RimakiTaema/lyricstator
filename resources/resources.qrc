@@ -1,0 +1,32 @@
+<RCC>
+    <qresource prefix="/">
+        <file>../assets/icon.png</file>
+        <file>../assets/logo.png</file>
+        <file>../assets/default_theme.json</file>
+    </qresource>
+    <qresource prefix="/fonts">
+        <file>../assets/fonts/roboto.ttf</file>
+        <file>../assets/fonts/opensans.ttf</file>
+    </qresource>
+    <qresource prefix="/images">
+        <file>../assets/images/play.png</file>
+        <file>../assets/images/pause.png</file>
+        <file>../assets/images/stop.png</file>
+        <file>../assets/images/next.png</file>
+        <file>../assets/images/previous.png</file>
+        <file>../assets/images/volume.png</file>
+        <file>../assets/images/microphone.png</file>
+        <file>../assets/images/note.png</file>
+        <file>../assets/images/equalizer.png</file>
+        <file>../assets/images/settings.png</file>
+    </qresource>
+    <qresource prefix="/themes">
+        <file>../assets/resource_packs/default/theme.json</file>
+        <file>../assets/resource_packs/neon/theme.json</file>
+        <file>../assets/resource_packs/retro/theme.json</file>
+    </qresource>
+    <qresource prefix="/samples">
+        <file>../samples/demo.lystr</file>
+        <file>../samples/sample_song.lystr</file>
+    </qresource>
+</RCC>
